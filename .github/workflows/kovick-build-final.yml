@@ -58,30 +58,28 @@ jobs:
           test -f AndroidManifest.xml
           grep -q 'com.zjx.jyandroid.MainApp.MainActivity' AndroidManifest.xml
 
-          # The original APK contains legacy/corrupt nine-patch chunks that modern aapt2 rejects.
-          # Rebuild those images as ordinary PNGs in the temporary build tree only.
+          # Remove the legacy login entry from the rebuilt package. MainActivity remains the launcher.
           python3 - <<'PY'
           from pathlib import Path
-          import struct, zlib
+          import re
+          p=Path('AndroidManifest.xml')
+          s=p.read_text(errors='ignore')
+          s=re.sub(r'\s*<activity\n\s*android:name="com\.zjx\.jyandroid\.MainApp\.LoginActivity"[^>]*/>', '', s)
+          p.write_text(s)
+          PY
 
-          def png_size(p):
-              b=p.read_bytes()
-              if b[:8] != b'\x89PNG\r\n\x1a\n':
-                  return None
-              w,h=struct.unpack('>II',b[16:24])
-              return w,h
-
+          # Legacy nine-patch files from the original APK are incompatible with modern aapt2.
+          # Rename them to ordinary PNGs only in this temporary build tree.
+          python3 - <<'PY'
+          from pathlib import Path
           for p in Path('res').rglob('*.9.png'):
-              size=png_size(p)
-              if not size:
-                  continue
-              # Remove the nine-patch suffix; aapt2 will then treat it as a normal drawable.
               q=p.with_name(p.name[:-6] + '.png')
               if q.exists():
                   q.unlink()
               p.rename(q)
           PY
 
+          # Split decompiler-generated files that contain multiple Smali classes.
           python3 - <<'PY'
           from pathlib import Path
           import re
