@@ -52,8 +52,6 @@ jobs:
           cd build-src
           rm -rf .git .github diagnostics
 
-          # Reconstructed APKs may not contain apktool.yml in the repository.
-          # Apktool requires this metadata file when building a decoded project.
           if [ ! -f apktool.yml ]; then
             cat > apktool.yml <<'YAML'
           version: 3.0.3
@@ -82,6 +80,39 @@ jobs:
                   seen=True
               out.append(line)
           p.write_text('\n'.join(out)+'\n')
+          PY
+
+          # Split malformed reconstructed smali files that contain more than one .class.
+          # Apktool requires exactly one class definition per smali file.
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          class_re = re.compile(r'^\.class\b.*?\s(L[^;\s]+(?:/[^;\s]+)*);\s*$', re.M)
+          roots = [Path('smali')] + sorted(Path('.').glob('smali_classes[2-9]*'))
+          split_count = 0
+          for root in roots:
+              if not root.is_dir():
+                  continue
+              for f in list(root.rglob('*.smali')):
+                  text = f.read_text(errors='ignore')
+                  matches = list(class_re.finditer(text))
+                  if len(matches) <= 1:
+                      continue
+                  chunks = []
+                  prefix = text[:matches[0].start()]
+                  for i, m in enumerate(matches):
+                      end = matches[i+1].start() if i+1 < len(matches) else len(text)
+                      chunks.append((m.group(1), text[m.start():end]))
+                  f.write_text(prefix + chunks[0][1])
+                  for desc, body in chunks[1:]:
+                      rel = Path(desc[1:])
+                      dest = root / rel
+                      dest.parent.mkdir(parents=True, exist_ok=True)
+                      if dest.exists():
+                          raise SystemExit(f'Class split collision: {dest}')
+                      dest.write_text(body)
+                  split_count += len(chunks) - 1
+          print('Split concatenated smali classes:', split_count)
           PY
 
           if [ -d smali ]; then
