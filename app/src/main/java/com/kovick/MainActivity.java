@@ -1,0 +1,32 @@
+package com.kovick;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.provider.Settings;
+import android.content.Intent;
+import android.graphics.Color;
+import android.net.Uri;
+import android.view.Gravity;
+import android.widget.*;
+
+public class MainActivity extends Activity {
+    LinearLayout root; TextView status;
+    int dp(float v){ return (int)(v*getResources().getDisplayMetrics().density+.5f); }
+    TextView text(String s,int size){ TextView t=new TextView(this); t.setText(s); t.setTextColor(Color.WHITE); t.setTextSize(size); t.setPadding(dp(16),dp(10),dp(16),dp(10)); return t; }
+    Button button(String s, android.view.View.OnClickListener l){ Button b=new Button(this); b.setText(s); b.setOnClickListener(l); return b; }
+    @Override public void onCreate(Bundle b){ super.onCreate(b); build(); }
+    void build(){
+        root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(18),dp(24),dp(18),dp(18)); root.setBackgroundColor(Color.rgb(5,3,10));
+        TextView logo=text("KOVICK",30); logo.setGravity(Gravity.CENTER); logo.setTextColor(Color.rgb(190,150,255)); root.addView(logo,new LinearLayout.LayoutParams(-1,dp(70)));
+        status=text("Status",16); root.addView(status);
+        root.addView(button("🎮 Iniciar mapeador",v->KovickAccessibilityService.startOverlay(this)));
+        root.addView(button("⌨️ Ativar acessibilidade",v->startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))));
+        root.addView(button("📱 Permitir sobreposição",v->startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:"+getPackageName())))));
+        root.addView(button("⚡ Verificar Shizuku",v->Toast.makeText(this,KovickAccessibilityService.shizukuOk()?"Shizuku autorizado":"Instale/autorize o Shizuku pela Depuração sem fio",Toast.LENGTH_LONG).show()));
+        root.addView(button("🎯 Editor de controles",v->KovickAccessibilityService.openEditor(this)));
+        root.addView(button("💾 Perfil atual",v->Toast.makeText(this,"Perfil padrão salvo automaticamente",Toast.LENGTH_SHORT).show()));
+        setContentView(root); refresh();
+    }
+    void refresh(){ if(status==null)return; status.setText("STATUS\nSobreposição: "+(Settings.canDrawOverlays(this)?"OK":"PENDENTE")+"\nAcessibilidade: "+(KovickAccessibilityService.enabled?"OK":"PENDENTE")+"\nShizuku/ADB: "+(KovickAccessibilityService.shizukuOk()?"OK":"PENDENTE")); }
+    @Override protected void onResume(){super.onResume(); refresh();}
+}
