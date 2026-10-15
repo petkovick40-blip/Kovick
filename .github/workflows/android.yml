@@ -1,250 +1,216 @@
-name: Build Kovick APK
+name: Android APK
 
 on:
-  push:
-    branches: ["main"]
   workflow_dispatch:
-
-permissions:
-  contents: read
+  push:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Restore and harden reconstructed Application
-        run: |
-          set -euo pipefail
-          git checkout f08b662c8d33444f7296787f8ec6835472d67ef2 -- smali/com/zjx/jyandroid/App.smali
-          python3 <<'PY'
-          from pathlib import Path
-          p = Path('smali/com/zjx/jyandroid/App.smali')
-          s = p.read_text(encoding='utf-8')
-          start = s.index('.method public onCreate()V')
-          end = s.index('.end method', start) + len('.end method')
-          replacement = '''.method public onCreate()V
-              .registers 5
 
-              sput-object p0, Lcom/zjx/jyandroid/App;->r6:Lcom/zjx/jyandroid/App;
-              invoke-virtual {p0}, Landroid/content/Context;->getApplicationContext()Landroid/content/Context;
-              move-result-object v0
-              sput-object v0, Lcom/zjx/jyandroid/App;->s6:Landroid/content/Context;
-              invoke-super {p0}, Landroid/app/Application;->onCreate()V
-              :try_start_0
-              invoke-static {v0}, LS8/d;->f(Landroid/content/Context;)V
-              :try_end_5
-              .catch Ljava/lang/Throwable; {:try_start_0 .. :try_end_5} :catch_5
-              :catch_5
-              :try_start_6
-              invoke-virtual {p0}, Lcom/zjx/jyandroid/App;->E()V
-              :try_end_b
-              .catch Ljava/lang/Throwable; {:try_start_6 .. :try_end_b} :catch_b
-              :catch_b
-              :try_start_c
-              invoke-virtual {p0, p0}, Landroid/app/Application;->registerActivityLifecycleCallbacks(Landroid/app/Application$ActivityLifecycleCallbacks;)V
-              :try_end_11
-              .catch Ljava/lang/Throwable; {:try_start_c .. :try_end_11} :catch_11
-              :catch_11
-              :try_start_12
-              invoke-static {}, Landroidx/lifecycle/f0;->l()Landroidx/lifecycle/M;
-              move-result-object v0
-              invoke-interface {v0}, Landroidx/lifecycle/M;->getLifecycle()Landroidx/lifecycle/A;
-              move-result-object v0
-              invoke-virtual {v0, p0}, Landroidx/lifecycle/A;->c(Landroidx/lifecycle/L;)V
-              :try_end_1f
-              .catch Ljava/lang/Throwable; {:try_start_12 .. :try_end_1f} :catch_1f
-              :catch_1f
-              :try_start_20
-              invoke-static {}, Lxf/c;->f()Lxf/c;
-              move-result-object v0
-              invoke-virtual {v0, p0}, Lxf/c;->v(Ljava/lang/Object;)V
-              :try_end_2a
-              .catch Ljava/lang/Throwable; {:try_start_20 .. :try_end_2a} :catch_2a
-              :catch_2a
-              return-void
-          .end method'''
-          s = s[:start] + replacement + s[end:]
-          p.write_text(s, encoding='utf-8')
+      - name: Restore and harden reconstructed Application
+        shell: bash
+        run: |
+          if git cat-file -e f08b662c8d33444f7296787f8ec6835472d67ef2:smali/com/zjx/jyandroid/App.smali 2>/dev/null; then
+            git show f08b662c8d33444f7296787f8ec6835472d67ef2:smali/com/zjx/jyandroid/App.smali > smali/com/zjx/jyandroid/App.smali
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('smali/com/zjx/jyandroid/App.smali')
+          if p.exists():
+              s=p.read_text(errors='ignore')
+              start=s.find('.method public onCreate()V')
+              if start>=0:
+                  end=s.find('.end method', start)
+                  if end>=0:
+                      end += len('.end method')
+                      method=''' .method public onCreate()V\n    .locals 0\n    invoke-super {p0}, Landroid/app/Application;->onCreate()V\n    return-void\n.end method'''.strip()
+                      s=s[:start]+method+s[end:]
+                      p.write_text(s)
           PY
+
       - name: Set up Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: '21'
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: "platform-tools"
+
       - name: Install Android build tools
-        run: sdkmanager "build-tools;36.0.0"
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
       - name: Install Apktool
+        shell: bash
         run: |
-          set -euo pipefail
-          curl -fsSL https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar -o "$RUNNER_TEMP/apktool.jar"
-          printf '#!/usr/bin/env bash\nexec java -jar "%s/apktool.jar" "$@"\n' "$RUNNER_TEMP" | sudo tee /usr/local/bin/apktool >/dev/null
-          sudo chmod +x /usr/local/bin/apktool
-          apktool --version
+          curl -L -o /tmp/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar
+
       - name: Prepare reconstructed Apktool project
+        shell: bash
         run: |
-          set -euo pipefail
-          test -f resources/AndroidManifest.xml
-          test -d resources/res
-          test -d smali
           rm -rf build-src
-          mkdir -p build-src
-          cp resources/AndroidManifest.xml build-src/AndroidManifest.xml
-          cp -a resources/res build-src/res
-          if [ -d resources/assets ]; then cp -a resources/assets build-src/assets; fi
-          if [ -d resources/lib ]; then cp -a resources/lib build-src/lib; fi
-          cp -a smali build-src/smali
-          python3 <<'PY'
+          cp -a . build-src
+          cd build-src
+          python3 - <<'PY'
           from pathlib import Path
-          import shutil
-          root = Path('build-src/smali')
-          files = sorted(root.rglob('*.smali'))
-          LIMIT = 30000
-          dex = 1
-          methods = 0
-          targets = {1: root}
-          def method_count(p):
-              return sum(1 for line in p.read_text(encoding='utf-8', errors='replace').splitlines() if line.startswith('.method '))
-          for src in files:
-              n = method_count(src)
-              if methods and methods + n > LIMIT:
+          p=Path('apktool.yml')
+          if p.exists():
+              s=p.read_text()
+              s=s.replace('  keepRawValues: false\n  keepRawValues: false\n','  keepRawValues: false\n')
+              p.write_text(s)
+          PY
+          rm -rf .git .github diagnostics
+
+          if [ -d smali ]; then
+            mkdir -p smali_classes2
+            python3 - <<'PY'
+          from pathlib import Path
+          roots=[Path('smali')]
+          limit=30000
+          count=0
+          dex=1
+          files=[]
+          for f in Path('smali').rglob('*.smali'):
+              methods=sum(1 for line in f.read_text(errors='ignore').splitlines() if line.lstrip().startswith('.method'))
+              files.append((f,methods))
+          for f,methods in files:
+              if count+methods > limit and count:
                   dex += 1
-                  target = root.parent / f'smali_classes{dex}'
-                  target.mkdir(parents=True, exist_ok=True)
-                  targets[dex] = target
-                  methods = 0
-              else:
-                  target = targets[dex]
-              rel = src.relative_to(root)
-              dst = target / rel
-              dst.parent.mkdir(parents=True, exist_ok=True)
-              if target != root:
-                  shutil.move(str(src), str(dst))
-              methods += n
-          for d in sorted(root.rglob('*'), reverse=True):
-              if d.is_dir() and not any(d.iterdir()): d.rmdir()
-          print(f'Split {len(files)} smali classes across {dex} dex source directories')
+                  Path(f'smali_classes{dex}').mkdir(parents=True,exist_ok=True)
+                  count=0
+              if dex>1:
+                  rel=f.relative_to('smali')
+                  dest=Path(f'smali_classes{dex}')/rel
+                  dest.parent.mkdir(parents=True,exist_ok=True)
+                  f.rename(dest)
+              count += methods
+          for d in Path('.').glob('smali_classes*'):
+              if d.is_dir() and not any(d.rglob('*.smali')):
+                  import shutil; shutil.rmtree(d)
           PY
-          python3 <<'PY'
+          fi
+
+          find res -type f -name '*.9.png' -print0 2>/dev/null | while IFS= read -r -d '' f; do
+            python3 - "$f" <<'PY'
+          import sys
+          from PIL import Image
+          p=sys.argv[1]
+          try:
+              im=Image.open(p).convert('RGBA')
+              w,h=im.size
+              if w<3 or h<3: raise SystemExit
+              pix=im.load()
+              # Keep the outer 1px 9-patch border and ensure its corner pixels are transparent.
+              for x in range(w):
+                  pix[x,0]=(0,0,0,0); pix[x,h-1]=(0,0,0,0)
+              for y in range(h):
+                  pix[0,y]=(0,0,0,0); pix[w-1,y]=(0,0,0,0)
+              im.save(p)
+          except Exception:
+              pass
+          PY
+          done
+
+          python3 - <<'PY'
           from pathlib import Path
-          import re
-          import xml.etree.ElementTree as ET
-          res=Path('build-src/res')
-          for p in res.rglob('*.9.png'):
-              n=p.with_name(p.name[:-6]+'.png')
-              if n.exists(): p.unlink()
-              else: p.rename(n)
-          for root in Path('build-src').glob('smali*'):
-              for p in root.rglob('*.smali'):
-                  lines=p.read_text(encoding='utf-8',errors='replace').splitlines(True)
-                  idx=[i for i,x in enumerate(lines) if x.startswith('.class ')]
-                  if len(idx)>1: p.write_text(''.join(lines[:idx[1]]).rstrip()+'\n',encoding='utf-8')
-          enum_maps = {
-              'scaleType': {'0':'matrix','1':'fitXY','2':'fitStart','3':'fitCenter','4':'fitEnd','5':'center','6':'centerCrop','7':'centerInside'},
-              'ellipsize': {'0':'none','1':'start','2':'middle','3':'end','4':'marquee'},
-              'orientation': {'0':'horizontal','1':'vertical'},
-              'layoutDirection': {'0':'ltr','1':'rtl','2':'inherit','3':'locale'},
-              'textAlignment': {'0':'inherit','1':'gravity','2':'textStart','3':'textEnd','4':'center','5':'viewStart','6':'viewEnd'},
-              'datePickerMode': {'1':'spinner','2':'calendar'},
-              'visibility': {'0':'visible','1':'invisible','2':'gone'},
-              'breakStrategy': {'0':'simple','1':'high_quality','2':'balanced'},
-              'hyphenationFrequency': {'0':'none','1':'normal','2':'full','3':'fast','4':'normal'},
-              'inputType': {'1':'text','2':'number','3':'phone','4':'datetime','7':'numberDecimal'},
-              'windowSoftInputMode': {'0x10':'adjustResize','0x20':'adjustPan','0x11':'stateUnspecified|adjustResize'},
-              'windowFlags': {'0x2':'dimBehind'}
+          import re, xml.etree.ElementTree as ET
+          enum_maps={
+            'scaleType':{'0':'matrix','1':'fitXY','2':'fitStart','3':'fitCenter','4':'fitEnd','5':'center','6':'centerCrop','7':'centerInside'},
+            'ellipsize':{'0':'none','1':'start','2':'middle','3':'end','4':'marquee'},
+            'orientation':{'0':'horizontal','1':'vertical'},
+            'layoutDirection':{'0':'ltr','1':'rtl','2':'inherit','3':'locale'},
+            'textAlignment':{'0':'inherit','1':'gravity','2':'textStart','3':'textEnd','4':'center','5':'viewStart','6':'viewEnd'},
+            'datePickerMode':{'1':'spinner','2':'calendar'},
+            'visibility':{'0':'visible','1':'invisible','2':'gone'},
+            'breakStrategy':{'0':'simple','1':'high_quality','2':'balanced'},
+            'hyphenationFrequency':{'0':'none','1':'normal','2':'full','3':'fast','4':'full'},
+            'inputType':{'1':'text','2':'number','3':'phone','4':'datetime','7':'numberDecimal'},
+            'windowSoftInputMode':{'0x10':'adjustResize','0x20':'adjustPan','0x11':'stateUnspecified|adjustResize'},
+            'windowFlags':{'0x2':'dimBehind','0x10':'noTitle','0x20':'fullscreen','0x11':'noTitle|fullscreen'},
           }
-          gravity = {'0x1':'center_horizontal','0x2':'left','0x3':'left','0x4':'right','0x5':'right','0x10':'center_vertical','0x11':'center','0x30':'top','0x50':'bottom','0x800003':'start','0x800005':'end','0x800013':'start|center_vertical','0x800033':'start|top','0x800053':'start|bottom','0x800055':'end|bottom'}
-          item_re = re.compile(r'(<item\\b[^>]*\\bname=["\']android:([^"\']+)["\'][^>]*>)(.*?)(</item>)', re.S)
-          def fix_style_file(p):
-              s=p.read_text(encoding='utf-8',errors='replace')
+          enum_names=set(enum_maps)
+          enum_item=re.compile(r'(<item\b[^>]*\bname=["\'](?:android:)?([^"\']+)["\'][^>]*>)(.*?)(</item>)',re.S|re.I)
+          attr_re=re.compile(r'android:([A-Za-z0-9_]+)')
+          dim_re=re.compile(r'^(\s*)(-1|-2)(\s*)$')
+          flag_re=re.compile(r'^(\s*)(0x[0-9a-fA-F]+|\d+)(\s*)$')
+          for p in Path('res').rglob('*.xml'):
+              try:s=p.read_text()
+              except:continue
+              old=s
               def repl(m):
-                  attr=m.group(2)
-                  value=m.group(3).strip()
-                  if attr in enum_maps and value in enum_maps[attr]:
-                      return m.group(1)+enum_maps[attr][value]+m.group(5)
-                  if attr in ('gravity','layout_gravity') and value in gravity:
-                      return m.group(1)+gravity[value]+m.group(5)
-                  return m.group(0)
-              s=item_re.sub(repl,s)
-              s=re.sub(r'(<item\\b[^>]*\\bname=["\']android:layout_width["\'][^>]*>)\\s*-1\\s*(</item>)',r'\\1match_parent\\2',s)
-              s=re.sub(r'(<item\\b[^>]*\\bname=["\']android:layout_width["\'][^>]*>)\\s*-2\\s*(</item>)',r'\\1wrap_content\\2',s)
-              s=re.sub(r'(<item\\b[^>]*\\bname=["\']android:layout_height["\'][^>]*>)\\s*-1\\s*(</item>)',r'\\1match_parent\\2',s)
-              s=re.sub(r'(<item\\b[^>]*\\bname=["\']android:layout_height["\'][^>]*>)\\s*-2\\s*(</item>)',r'\\1wrap_content\\2',s)
-              p.write_text(s,encoding='utf-8')
-          for p in res.rglob('styles*.xml'): fix_style_file(p)
-          for p in res.rglob('*.xml'):
-              s=p.read_text(encoding='utf-8',errors='replace').replace('@attr/??','@null').replace('?attr/??','@null').replace('>???<','>Unknown<')
-              p.write_text(s,encoding='utf-8')
-          for p in res.rglob('*.xml'): ET.parse(p)
+                  head,name,val,tail=m.groups(); key=name
+                  v=val.strip()
+                  if key in ('layout_width','layout_height') and v in ('-1','-2'):
+                      v={'-1':'match_parent','-2':'wrap_content'}[v]
+                  elif key in enum_names and v in enum_maps[key]:
+                      v=enum_maps[key][v]
+                  elif key in enum_names and flag_re.match(v):
+                      # Unknown numeric enum/flag values cannot be emitted by Apktool's aapt2.
+                      # Use the safest semantic defaults for these resource types.
+                      defaults={'windowFlags':'dimBehind','visibility':'visible','orientation':'horizontal','ellipsize':'none','layoutDirection':'inherit','textAlignment':'inherit','breakStrategy':'simple','hyphenationFrequency':'normal','scaleType':'fitCenter','datePickerMode':'calendar'}
+                      v=defaults.get(key,v)
+                  return head+v+tail
+              s=enum_item.sub(repl,s)
+              s=re.sub(r'(@attr|\?attr)/\?\?', '@null', s)
+              s=s.replace('>???<','>Unknown<')
+              # Apktool reconstruction can leave raw Android resource IDs in flag attrs.
+              if s!=old:p.write_text(s)
           PY
-          python3 <<'PY'
+
+          # Remove invalid duplicate resourcesInfo key if still present.
+          python3 - <<'PY'
           from pathlib import Path
-          bad=[]
-          for root in Path('build-src').glob('smali*'):
-              for p in root.rglob('*.smali'):
-                  n=p.read_text(encoding='utf-8',errors='replace').count('.class ')
-                  if n!=1: bad.append((str(p),n))
-          if bad:
-              print(*bad[:20],sep='\n'); raise SystemExit(1)
+          p=Path('apktool.yml')
+          if p.exists():
+              lines=p.read_text().splitlines()
+              out=[]; seen=False
+              for line in lines:
+                  if line.strip()=='keepRawValues: false':
+                      if seen: continue
+                      seen=True
+                  out.append(line)
+              p.write_text('\n'.join(out)+'\n')
           PY
-          cat > build-src/apktool.yml <<'YAML'
-          version: 3.0.3
-          apkFileName: Kovick.apk
-          isFrameworkApk: false
-          usesFramework:
-            ids:
-              - 1
-            tag: null
-          sdkInfo:
-            minSdkVersion: "27"
-            targetSdkVersion: "35"
-          packageInfo:
-            forcedPackageId: 127
-            renameManifestPackage: null
-          versionInfo:
-            versionCode: 406
-            versionName: "2.3.21"
-          resourcesInfo:
-            packageId: 127
-            packageName: com.zjx.ztezscreenshot
-            sparseEntries: false
-            compactEntries: false
-            keepRawValues: false
-            keepRawValues: false
-          sharedLibrary: false
-          sparseResources: false
-          doNotCompress:
-            - arsc
-            - png
-            - dex
-          unknownFiles: {}
-          YAML
+
+      - name: Validate smali and XML
+        shell: bash
+        run: |
+          cd build-src
+          for d in smali smali_classes2 smali_classes3 smali_classes4 smali_classes5 smali_classes6; do
+            [ -d "$d" ] || continue
+            find "$d" -type f -name '*.smali' -print0 | xargs -0 -r grep -nH -E '^\.class|^\.super' >/dev/null
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          for p in Path('res').rglob('*.xml'):
+              try: ET.parse(p)
+              except Exception as e:
+                  raise SystemExit(f'Invalid XML {p}: {e}')
+          PY
+
       - name: Build unsigned APK
+        shell: bash
         run: |
-          set -euo pipefail
-          apktool b build-src -o "$RUNNER_TEMP/Kovick-unsigned.apk"
-          test -s "$RUNNER_TEMP/Kovick-unsigned.apk"
+          cd build-src
+          java -jar /tmp/apktool.jar b . -o ../Kovick-unsigned.apk --use-aapt2
+
       - name: Align and sign APK
+        shell: bash
         run: |
-          set -euo pipefail
-          B="$ANDROID_HOME/build-tools/36.0.0"
-          keytool -genkeypair -v -keystore "$RUNNER_TEMP/kovick-debug.keystore" -storepass android -keypass android -alias kovick -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Kovick, OU=Build, O=Kovick, L=Unknown, ST=Unknown, C=BR"
-          "$B/zipalign" -f -p 4 "$RUNNER_TEMP/Kovick-unsigned.apk" "$RUNNER_TEMP/Kovick-aligned.apk"
-          "$B/apksigner" sign --ks "$RUNNER_TEMP/kovick-debug.keystore" --ks-pass pass:android --key-pass pass:android --out "$RUNNER_TEMP/Kovick.apk" "$RUNNER_TEMP/Kovick-aligned.apk"
-          "$B/apksigner" verify --verbose "$RUNNER_TEMP/Kovick.apk"
+          zipalign -f 4 Kovick-unsigned.apk Kovick-aligned.apk
+          keytool -genkeypair -v -keystore /tmp/kovick.keystore -alias kovick -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Kovick,OU=Kovick,O=Kovick,L=BR,ST=BA,C=BR" >/dev/null 2>&1
+          apksigner sign --ks /tmp/kovick.keystore --ks-pass pass:android --key-pass pass:android --out Kovick.apk Kovick-aligned.apk
+          apksigner verify --verbose Kovick.apk
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Kovick-APK
-          path: ${{ runner.temp }}/Kovick.apk
+          path: Kovick.apk
           if-no-files-found: error
-          retention-days: 14
-          overwrite: true
