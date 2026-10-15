@@ -17,7 +17,9 @@ public class KovickAccessibilityService extends AccessibilityService {
     WindowManager wm;
     SharedPreferences prefs;
     final ArrayList<View> controls = new ArrayList<>();
-    static final int KEY_W=51, KEY_A=29, KEY_S=47, KEY_D=32, KEY_FIRE=62, KEY_AIM=0;
+    static final int KEY_W=KeyEvent.KEYCODE_W, KEY_A=KeyEvent.KEYCODE_A,
+            KEY_S=KeyEvent.KEYCODE_S, KEY_D=KeyEvent.KEYCODE_D,
+            KEY_FIRE=KeyEvent.KEYCODE_SPACE, KEY_AIM=KeyEvent.KEYCODE_N;
 
     @Override protected void onServiceConnected() {
         super.onServiceConnected();
@@ -40,7 +42,6 @@ public class KovickAccessibilityService extends AccessibilityService {
         if (prefs == null || e == null) return false;
         int key = e.getKeyCode();
         String action = prefs.getString("map_" + key, "");
-        // Do not intercept normal typing or system shortcuts unless this key is mapped.
         if (action.isEmpty()) return false;
         if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
             float x = prefs.getFloat("key_" + key + "_x",
@@ -75,7 +76,7 @@ public class KovickAccessibilityService extends AccessibilityService {
         addKey("S", .50f, .38f, KEY_S);
         addKey("D", .65f, .38f, KEY_D);
         addKey("FIRE", .82f, .72f, KEY_FIRE);
-        addKey("AIM", .70f, .58f, KEY_AIM);
+        addKey("AIM (N)", .70f, .58f, KEY_AIM);
         TextView close = new TextView(this);
         close.setText("✕");
         close.setTextSize(20);
@@ -121,7 +122,6 @@ public class KovickAccessibilityService extends AccessibilityService {
                     float cx=q.x+44, cy=q.y+44;
                     prefs.edit().putFloat("key_"+key+"_x",cx).putFloat("key_"+key+"_y",cy)
                             .putString("map_"+key,"tap").apply();
-                    // A tap on a control configures its target; dragging only moves the control.
                     return true;
                 }
                 return true;
