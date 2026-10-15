@@ -1,0 +1,16 @@
+###### Class e2.C2448f (e2.f)
+.class public final synthetic Le2/f;
+.super Ljava/lang/Object;
+.source "SourceFile"
+
+
+# direct methods
+.method public static bridge synthetic a(Landroid/app/job/JobParameters;)Landroid/net/Network;
+    .registers 1
+
+    invoke-virtual {p0}, Landroid/app/job/JobParameters;->getNetwork()Landroid/net/Network;
+
+    move-result-object p0
+
+    return-object p0
+.end method

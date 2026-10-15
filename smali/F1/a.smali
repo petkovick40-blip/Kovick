@@ -1,0 +1,201 @@
+###### Class F1.a (F1.a)
+.class public LF1/a;
+.super Ljava/lang/Object;
+.source "SourceFile"
+
+
+# annotations
+.annotation build Lh/c0;
+    value = {
+        .enum Lh/c0$a;->Z:Lh/c0$a;
+    }
+.end annotation
+
+
+# static fields
+.field public static final e:Ljava/util/Map;
+    .annotation system Ldalvik/annotation/Signature;
+        value = {
+            "Ljava/util/Map<",
+            "Ljava/lang/String;",
+            "Ljava/util/concurrent/locks/Lock;",
+            ">;"
+        }
+    .end annotation
+.end field
+
+
+# instance fields
+.field public final a:Ljava/io/File;
+
+.field public final b:Ljava/util/concurrent/locks/Lock;
+
+.field public final c:Z
+
+.field public d:Ljava/nio/channels/FileChannel;
+
+
+# direct methods
+.method static constructor <clinit>()V
+    .registers 1
+
+    new-instance v0, Ljava/util/HashMap;
+
+    invoke-direct {v0}, Ljava/util/HashMap;-><init>()V
+
+    sput-object v0, LF1/a;->e:Ljava/util/Map;
+
+    return-void
+.end method
+
+.method public constructor <init>(Ljava/lang/String;Ljava/io/File;Z)V
+    .registers 6
+    .param p1    # Ljava/lang/String;
+        .annotation build Lh/O;
+        .end annotation
+    .end param
+    .param p2    # Ljava/io/File;
+        .annotation build Lh/O;
+        .end annotation
+    .end param
+
+    invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+
+    new-instance v0, Ljava/io/File;
+
+    const-string v1, ".lck"
+
+    invoke-static {p1, v1}, Lz/a;->a(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object p1
+
+    invoke-direct {v0, p2, p1}, Ljava/io/File;-><init>(Ljava/io/File;Ljava/lang/String;)V
+
+    iput-object v0, p0, LF1/a;->a:Ljava/io/File;
+
+    invoke-virtual {v0}, Ljava/io/File;->getAbsolutePath()Ljava/lang/String;
+
+    move-result-object p1
+
+    invoke-static {p1}, LF1/a;->a(Ljava/lang/String;)Ljava/util/concurrent/locks/Lock;
+
+    move-result-object p1
+
+    iput-object p1, p0, LF1/a;->b:Ljava/util/concurrent/locks/Lock;
+
+    iput-boolean p3, p0, LF1/a;->c:Z
+
+    return-void
+.end method
+
+.method public static a(Ljava/lang/String;)Ljava/util/concurrent/locks/Lock;
+    .registers 3
+
+    sget-object v0, LF1/a;->e:Ljava/util/Map;
+
+    monitor-enter v0
+
+    :try_start_3
+    invoke-interface {v0, p0}, Ljava/util/Map;->get(Ljava/lang/Object;)Ljava/lang/Object;
+
+    move-result-object v1
+
+    check-cast v1, Ljava/util/concurrent/locks/Lock;
+
+    if-nez v1, :cond_16
+
+    new-instance v1, Ljava/util/concurrent/locks/ReentrantLock;
+
+    invoke-direct {v1}, Ljava/util/concurrent/locks/ReentrantLock;-><init>()V
+
+    invoke-interface {v0, p0, v1}, Ljava/util/Map;->put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+
+    goto :goto_16
+
+    :catchall_14
+    move-exception p0
+
+    goto :goto_18
+
+    :cond_16
+    :goto_16
+    monitor-exit v0
+
+    return-object v1
+
+    :goto_18
+    monitor-exit v0
+    :try_end_19
+    .catchall {:try_start_3 .. :try_end_19} :catchall_14
+
+    throw p0
+.end method
+
+
+# virtual methods
+.method public b()V
+    .registers 4
+
+    iget-object v0, p0, LF1/a;->b:Ljava/util/concurrent/locks/Lock;
+
+    invoke-interface {v0}, Ljava/util/concurrent/locks/Lock;->lock()V
+
+    iget-boolean v0, p0, LF1/a;->c:Z
+
+    if-eqz v0, :cond_23
+
+    :try_start_9
+    new-instance v0, Ljava/io/FileOutputStream;
+
+    iget-object v1, p0, LF1/a;->a:Ljava/io/File;
+
+    invoke-direct {v0, v1}, Ljava/io/FileOutputStream;-><init>(Ljava/io/File;)V
+
+    invoke-virtual {v0}, Ljava/io/FileOutputStream;->getChannel()Ljava/nio/channels/FileChannel;
+
+    move-result-object v0
+
+    iput-object v0, p0, LF1/a;->d:Ljava/nio/channels/FileChannel;
+
+    invoke-virtual {v0}, Ljava/nio/channels/FileChannel;->lock()Ljava/nio/channels/FileLock;
+    :try_end_19
+    .catch Ljava/io/IOException; {:try_start_9 .. :try_end_19} :catch_1a
+
+    goto :goto_23
+
+    :catch_1a
+    move-exception v0
+
+    new-instance v1, Ljava/lang/IllegalStateException;
+
+    const-string v2, "Unable to grab copy lock."
+
+    invoke-direct {v1, v2, v0}, Ljava/lang/IllegalStateException;-><init>(Ljava/lang/String;Ljava/lang/Throwable;)V
+
+    throw v1
+
+    :cond_23
+    :goto_23
+    return-void
+.end method
+
+.method public c()V
+    .registers 2
+
+    iget-object v0, p0, LF1/a;->d:Ljava/nio/channels/FileChannel;
+
+    if-eqz v0, :cond_7
+
+    :try_start_4
+    invoke-virtual {v0}, Ljava/nio/channels/spi/AbstractInterruptibleChannel;->close()V
+    :try_end_7
+    .catch Ljava/io/IOException; {:try_start_4 .. :try_end_7} :catch_7
+
+    :catch_7
+    :cond_7
+    iget-object v0, p0, LF1/a;->b:Ljava/util/concurrent/locks/Lock;
+
+    invoke-interface {v0}, Ljava/util/concurrent/locks/Lock;->unlock()V
+
+    return-void
+.end method

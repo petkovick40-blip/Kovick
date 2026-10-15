@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name="initial_horizontal_dynamic_rc_value_slider_values">
+        <item>0</item>
+        <item>6</item>
+    </array>
+    <array name="initial_vertical_dynamic_rc_value_slider_values">
+        <item>0</item>
+        <item>100</item>
+    </array>
+</resources>

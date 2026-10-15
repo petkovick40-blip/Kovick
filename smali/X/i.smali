@@ -1,0 +1,16 @@
+###### Class X.i (X.i)
+.class public final synthetic LX/i;
+.super Ljava/lang/Object;
+.source "SourceFile"
+
+
+# direct methods
+.method public static bridge synthetic a(Landroid/content/pm/ShortcutInfo;)Landroid/content/LocusId;
+    .registers 1
+
+    invoke-virtual {p0}, Landroid/content/pm/ShortcutInfo;->getLocusId()Landroid/content/LocusId;
+
+    move-result-object p0
+
+    return-object p0
+.end method

@@ -1,0 +1,105 @@
+package f6;
+
+import java.io.Serializable;
+import java.util.AbstractCollection;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import javax.annotation.CheckForNull;
+
+/* JADX INFO: renamed from: f6.p, reason: case insensitive filesystem */
+/* JADX INFO: loaded from: classes.dex */
+public abstract class AbstractC2605p extends AbstractCollection implements Serializable {
+
+    /* JADX INFO: renamed from: X, reason: collision with root package name */
+    public static final Object[] f58763X = new Object[0];
+
+    @Override // java.util.AbstractCollection, java.util.Collection
+    @Deprecated
+    public final boolean add(Object obj) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override // java.util.AbstractCollection, java.util.Collection
+    @Deprecated
+    public final boolean addAll(Collection collection) {
+        throw new UnsupportedOperationException();
+    }
+
+    public int b(Object[] objArr, int i10) {
+        throw null;
+    }
+
+    @Override // java.util.AbstractCollection, java.util.Collection
+    @Deprecated
+    public final void clear() {
+        throw new UnsupportedOperationException();
+    }
+
+    public int i() {
+        throw null;
+    }
+
+    public int k() {
+        throw null;
+    }
+
+    @Override // java.util.AbstractCollection, java.util.Collection, java.lang.Iterable
+    /* JADX INFO: renamed from: o, reason: merged with bridge method [inline-methods] */
+    public abstract AbstractC2611w iterator();
+
+    @CheckForNull
+    public Object[] q() {
+        throw null;
+    }
+
+    @Override // java.util.AbstractCollection, java.util.Collection
+    @Deprecated
+    public final boolean remove(@CheckForNull Object obj) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override // java.util.AbstractCollection, java.util.Collection
+    @Deprecated
+    public final boolean removeAll(Collection collection) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override // java.util.AbstractCollection, java.util.Collection
+    @Deprecated
+    public final boolean retainAll(Collection collection) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override // java.util.Collection, java.lang.Iterable
+    public final Spliterator spliterator() {
+        return Spliterators.spliterator(this, 1296);
+    }
+
+    @Override // java.util.AbstractCollection, java.util.Collection
+    public final Object[] toArray() {
+        return toArray(f58763X);
+    }
+
+    @Override // java.util.AbstractCollection, java.util.Collection
+    public final Object[] toArray(Object[] objArr) {
+        objArr.getClass();
+        int size = size();
+        int length = objArr.length;
+        if (length < size) {
+            Object[] objArrQ = q();
+            if (objArrQ != null) {
+                return Arrays.copyOfRange(objArrQ, k(), i(), objArr.getClass());
+            }
+            if (length != 0) {
+                objArr = Arrays.copyOf(objArr, 0);
+            }
+            objArr = Arrays.copyOf(objArr, size);
+        } else if (length > size) {
+            objArr[size] = null;
+        }
+        b(objArr, 0);
+        return objArr;
+    }
+}

@@ -1,0 +1,8 @@
+package androidx.test.internal.platform;
+
+/* JADX INFO: loaded from: classes.dex */
+public interface ThreadChecker {
+    void a();
+
+    void b();
+}

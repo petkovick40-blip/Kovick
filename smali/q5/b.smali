@@ -1,0 +1,14 @@
+###### Class q5.b (q5.b)
+.class public final synthetic Lq5/b;
+.super Ljava/lang/Object;
+.source "SourceFile"
+
+
+# direct methods
+.method public static bridge synthetic a(Landroid/app/UiModeManager;Landroid/app/UiModeManager$ContrastChangeListener;)V
+    .registers 2
+
+    invoke-virtual {p0, p1}, Landroid/app/UiModeManager;->removeContrastChangeListener(Landroid/app/UiModeManager$ContrastChangeListener;)V
+
+    return-void
+.end method

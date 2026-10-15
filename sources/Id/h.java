@@ -1,0 +1,144 @@
+package Id;
+
+import Ec.InterfaceC0987v;
+import Ec.r;
+import Kc.C1024h;
+import Ld.j;
+import Ld.l;
+import Xb.t;
+import Yc.C1537c;
+import Yc.x0;
+import cd.o;
+import ce.InterfaceC2138b;
+import ce.InterfaceC2141e;
+import ce.InterfaceC2145i;
+import ee.C2528b;
+import hc.C0;
+import hc.f0;
+import java.math.BigInteger;
+import java.security.InvalidKeyException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.SignatureException;
+import java.security.SignatureSpi;
+import java.security.spec.AlgorithmParameterSpec;
+
+/* JADX INFO: loaded from: classes4.dex */
+public class h extends SignatureSpi implements t, C0 {
+
+    /* JADX INFO: renamed from: X, reason: collision with root package name */
+    public InterfaceC0987v f8794X = new C1024h();
+
+    /* JADX INFO: renamed from: Y, reason: collision with root package name */
+    public r f8795Y = new o();
+
+    /* JADX INFO: renamed from: Z, reason: collision with root package name */
+    public SecureRandom f8796Z;
+
+    @Override // java.security.SignatureSpi
+    public Object engineGetParameter(String str) {
+        throw new UnsupportedOperationException("engineSetParameter unsupported");
+    }
+
+    @Override // java.security.SignatureSpi
+    public void engineInitSign(PrivateKey privateKey) throws InvalidKeyException {
+        C1537c c1537cC = privateKey instanceof InterfaceC2138b ? j.c(privateKey) : l.a(privateKey);
+        this.f8794X.b();
+        SecureRandom secureRandom = this.f8796Z;
+        if (secureRandom != null) {
+            this.f8795Y.a(true, new x0(c1537cC, secureRandom));
+        } else {
+            this.f8795Y.a(true, c1537cC);
+        }
+    }
+
+    @Override // java.security.SignatureSpi
+    public void engineInitVerify(PublicKey publicKey) throws InvalidKeyException {
+        C1537c c1537cD;
+        if (publicKey instanceof InterfaceC2141e) {
+            c1537cD = j.d(publicKey);
+        } else if (publicKey instanceof InterfaceC2145i) {
+            c1537cD = l.b(publicKey);
+        } else {
+            try {
+                PublicKey publicKeyN = C2528b.n(f0.X(publicKey.getEncoded()));
+                if (!(publicKeyN instanceof InterfaceC2141e)) {
+                    throw new InvalidKeyException("can't recognise key type in DSA based signer");
+                }
+                c1537cD = j.d(publicKeyN);
+            } catch (Exception unused) {
+                throw new InvalidKeyException("can't recognise key type in DSA based signer");
+            }
+        }
+        this.f8794X.b();
+        this.f8795Y.a(false, c1537cD);
+    }
+
+    @Override // java.security.SignatureSpi
+    public void engineSetParameter(String str, Object obj) {
+        throw new UnsupportedOperationException("engineSetParameter unsupported");
+    }
+
+    @Override // java.security.SignatureSpi
+    public byte[] engineSign() throws SignatureException {
+        byte[] bArr = new byte[this.f8794X.h()];
+        this.f8794X.c(bArr, 0);
+        try {
+            byte[] bArr2 = new byte[64];
+            BigInteger[] bigIntegerArrB = this.f8795Y.b(bArr);
+            byte[] byteArray = bigIntegerArrB[0].toByteArray();
+            byte[] byteArray2 = bigIntegerArrB[1].toByteArray();
+            if (byteArray2[0] != 0) {
+                System.arraycopy(byteArray2, 0, bArr2, 32 - byteArray2.length, byteArray2.length);
+            } else {
+                System.arraycopy(byteArray2, 1, bArr2, 32 - (byteArray2.length - 1), byteArray2.length - 1);
+            }
+            if (byteArray[0] != 0) {
+                System.arraycopy(byteArray, 0, bArr2, 64 - byteArray.length, byteArray.length);
+            } else {
+                System.arraycopy(byteArray, 1, bArr2, 64 - (byteArray.length - 1), byteArray.length - 1);
+            }
+            return bArr2;
+        } catch (Exception e10) {
+            throw new SignatureException(e10.toString());
+        }
+    }
+
+    @Override // java.security.SignatureSpi
+    public void engineUpdate(byte b10) throws SignatureException {
+        this.f8794X.update(b10);
+    }
+
+    @Override // java.security.SignatureSpi
+    public boolean engineVerify(byte[] bArr) throws SignatureException {
+        byte[] bArr2 = new byte[this.f8794X.h()];
+        this.f8794X.c(bArr2, 0);
+        try {
+            byte[] bArr3 = new byte[32];
+            byte[] bArr4 = new byte[32];
+            System.arraycopy(bArr, 0, bArr4, 0, 32);
+            System.arraycopy(bArr, 32, bArr3, 0, 32);
+            BigInteger[] bigIntegerArr = {new BigInteger(1, bArr3), new BigInteger(1, bArr4)};
+            return this.f8795Y.c(bArr2, bigIntegerArr[0], bigIntegerArr[1]);
+        } catch (Exception unused) {
+            throw new SignatureException("error decoding signature bytes.");
+        }
+    }
+
+    @Override // java.security.SignatureSpi
+    public void engineInitSign(PrivateKey privateKey, SecureRandom secureRandom) throws InvalidKeyException {
+        this.f8796Z = secureRandom;
+        engineInitSign(privateKey);
+    }
+
+    @Override // java.security.SignatureSpi
+    public void engineSetParameter(AlgorithmParameterSpec algorithmParameterSpec) {
+        throw new UnsupportedOperationException("engineSetParameter unsupported");
+    }
+
+    @Override // java.security.SignatureSpi
+    public void engineUpdate(byte[] bArr, int i10, int i11) throws SignatureException {
+        this.f8794X.update(bArr, i10, i11);
+    }
+}

@@ -1,0 +1,6 @@
+package a6;
+
+/* JADX INFO: loaded from: classes.dex */
+public interface D {
+    E b();
+}

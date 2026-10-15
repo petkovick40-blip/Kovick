@@ -1,0 +1,395 @@
+###### Class N4.i (N4.i)
+.class public final LN4/i;
+.super LN4/c$a;
+.source "SourceFile"
+
+
+# annotations
+.annotation build Ls4/a;
+.end annotation
+
+
+# instance fields
+.field public final j:LT0/f;
+
+
+# direct methods
+.method public constructor <init>(LT0/f;)V
+    .registers 2
+
+    invoke-direct {p0}, LN4/c$a;-><init>()V
+
+    iput-object p1, p0, LN4/i;->j:LT0/f;
+
+    return-void
+.end method
+
+.method public static h(LT0/f;)LN4/i;
+    .registers 2
+    .param p0    # LT0/f;
+        .annotation build Lh/Q;
+        .end annotation
+    .end param
+    .annotation build Lh/Q;
+    .end annotation
+
+    .annotation build Ls4/a;
+    .end annotation
+
+    if-eqz p0, :cond_8
+
+    new-instance v0, LN4/i;
+
+    invoke-direct {v0, p0}, LN4/i;-><init>(LT0/f;)V
+
+    return-object v0
+
+    :cond_8
+    const/4 p0, 0x0
+
+    return-object p0
+.end method
+
+
+# virtual methods
+.method public final B0(Landroid/content/Intent;I)V
+    .registers 4
+    .param p1    # Landroid/content/Intent;
+        .annotation build Lh/O;
+        .end annotation
+    .end param
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0, p1, p2}, LT0/f;->startActivityForResult(Landroid/content/Intent;I)V
+
+    return-void
+.end method
+
+.method public final Q1()Z
+    .registers 2
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    iget-boolean v0, v0, LT0/f;->N6:Z
+
+    return v0
+.end method
+
+.method public final T0(LN4/d;)V
+    .registers 3
+    .param p1    # LN4/d;
+        .annotation build Lh/O;
+        .end annotation
+    .end param
+
+    invoke-static {p1}, LN4/f;->h(LN4/d;)Ljava/lang/Object;
+
+    move-result-object p1
+
+    check-cast p1, Landroid/view/View;
+
+    invoke-static {p1}, Lx4/z;->r(Ljava/lang/Object;)Ljava/lang/Object;
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0, p1}, LT0/f;->D2(Landroid/view/View;)V
+
+    return-void
+.end method
+
+.method public final V1(Z)V
+    .registers 3
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0, p1}, LT0/f;->w2(Z)V
+
+    return-void
+.end method
+
+.method public final W0()Z
+    .registers 2
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    iget-boolean v0, v0, LT0/f;->A6:Z
+
+    return v0
+.end method
+
+.method public final Z()LN4/d;
+    .registers 3
+    .annotation build Lh/O;
+    .end annotation
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0}, LT0/f;->n()LT0/g;
+
+    move-result-object v0
+
+    new-instance v1, LN4/f;
+
+    invoke-direct {v1, v0}, LN4/f;-><init>(Ljava/lang/Object;)V
+
+    return-object v1
+.end method
+
+.method public final a0()Landroid/os/Bundle;
+    .registers 2
+    .annotation build Lh/Q;
+    .end annotation
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    iget-object v0, v0, LT0/f;->s6:Landroid/os/Bundle;
+
+    return-object v0
+.end method
+
+.method public final c()I
+    .registers 2
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    iget v0, v0, LT0/f;->v6:I
+
+    return v0
+.end method
+
+.method public final c0()LN4/c;
+    .registers 2
+    .annotation build Lh/Q;
+    .end annotation
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    iget-object v0, v0, LT0/f;->H6:LT0/f;
+
+    invoke-static {v0}, LN4/i;->h(LT0/f;)LN4/i;
+
+    move-result-object v0
+
+    return-object v0
+.end method
+
+.method public final d()I
+    .registers 2
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    iget v0, v0, LT0/f;->I6:I
+
+    return v0
+.end method
+
+.method public final d0()LN4/d;
+    .registers 3
+    .annotation build Lh/O;
+    .end annotation
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0}, LT0/f;->R()Landroid/content/res/Resources;
+
+    move-result-object v0
+
+    new-instance v1, LN4/f;
+
+    invoke-direct {v1, v0}, LN4/f;-><init>(Ljava/lang/Object;)V
+
+    return-object v1
+.end method
+
+.method public final e0()LN4/d;
+    .registers 3
+    .annotation build Lh/O;
+    .end annotation
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0}, LT0/f;->f0()Landroid/view/View;
+
+    move-result-object v0
+
+    new-instance v1, LN4/f;
+
+    invoke-direct {v1, v0}, LN4/f;-><init>(Ljava/lang/Object;)V
+
+    return-object v1
+.end method
+
+.method public final f0()LN4/c;
+    .registers 2
+    .annotation build Lh/Q;
+    .end annotation
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0}, LT0/f;->b0()LT0/f;
+
+    move-result-object v0
+
+    invoke-static {v0}, LN4/i;->h(LT0/f;)LN4/i;
+
+    move-result-object v0
+
+    return-object v0
+.end method
+
+.method public final g0()Ljava/lang/String;
+    .registers 2
+    .annotation build Lh/Q;
+    .end annotation
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    iget-object v0, v0, LT0/f;->K6:Ljava/lang/String;
+
+    return-object v0
+.end method
+
+.method public final h0(Z)V
+    .registers 3
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0, p1}, LT0/f;->h2(Z)V
+
+    return-void
+.end method
+
+.method public final i0()Z
+    .registers 2
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    iget-boolean v0, v0, LT0/f;->y6:Z
+
+    return v0
+.end method
+
+.method public final j0(Z)V
+    .registers 3
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0, p1}, LT0/f;->k2(Z)V
+
+    return-void
+.end method
+
+.method public final k0()Z
+    .registers 2
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0}, LT0/f;->x0()Z
+
+    move-result v0
+
+    return v0
+.end method
+
+.method public final l0(Z)V
+    .registers 3
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0, p1}, LT0/f;->q2(Z)V
+
+    return-void
+.end method
+
+.method public final m0(LN4/d;)V
+    .registers 3
+    .param p1    # LN4/d;
+        .annotation build Lh/O;
+        .end annotation
+    .end param
+
+    invoke-static {p1}, LN4/f;->h(LN4/d;)Ljava/lang/Object;
+
+    move-result-object p1
+
+    check-cast p1, Landroid/view/View;
+
+    invoke-static {p1}, Lx4/z;->r(Ljava/lang/Object;)Ljava/lang/Object;
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0, p1}, LT0/f;->J1(Landroid/view/View;)V
+
+    return-void
+.end method
+
+.method public final m1()Z
+    .registers 2
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0}, LT0/f;->n0()Z
+
+    move-result v0
+
+    return v0
+.end method
+
+.method public final o2()Z
+    .registers 2
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0}, LT0/f;->z0()Z
+
+    move-result v0
+
+    return v0
+.end method
+
+.method public final u2()Z
+    .registers 2
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0}, LT0/f;->e0()Z
+
+    move-result v0
+
+    return v0
+.end method
+
+.method public final v0(Landroid/content/Intent;)V
+    .registers 3
+    .param p1    # Landroid/content/Intent;
+        .annotation build Lh/O;
+        .end annotation
+    .end param
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    invoke-virtual {v0, p1}, LT0/f;->y2(Landroid/content/Intent;)V
+
+    return-void
+.end method
+
+.method public final w1()Z
+    .registers 2
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    iget-boolean v0, v0, LT0/f;->M6:Z
+
+    return v0
+.end method
+
+.method public final z0()Z
+    .registers 2
+
+    iget-object v0, p0, LN4/i;->j:LT0/f;
+
+    iget-boolean v0, v0, LT0/f;->L6:Z
+
+    return v0
+.end method

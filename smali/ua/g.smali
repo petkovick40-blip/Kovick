@@ -1,0 +1,30 @@
+###### Class ua.C4196g (ua.g)
+.class public final Lua/g;
+.super Ljava/io/ByteArrayOutputStream;
+.source "SourceFile"
+
+
+# direct methods
+.method public constructor <init>(I)V
+    .registers 2
+
+    invoke-direct {p0, p1}, Ljava/io/ByteArrayOutputStream;-><init>(I)V
+
+    return-void
+.end method
+
+
+# virtual methods
+.method public final a()[B
+    .registers 3
+    .annotation build LCf/l;
+    .end annotation
+
+    iget-object v0, p0, Ljava/io/ByteArrayOutputStream;->buf:[B
+
+    const-string v1, "buf"
+
+    invoke-static {v0, v1}, LBa/L;->o(Ljava/lang/Object;Ljava/lang/String;)V
+
+    return-object v0
+.end method

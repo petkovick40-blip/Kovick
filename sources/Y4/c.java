@@ -1,0 +1,37 @@
+package Y4;
+
+import android.content.Intent;
+import android.os.Parcel;
+import android.os.Parcelable;
+import z4.C4715b;
+
+/* JADX INFO: loaded from: classes.dex */
+public final class c implements Parcelable.Creator {
+    @Override // android.os.Parcelable.Creator
+    public final Object createFromParcel(Parcel parcel) {
+        int iI0 = C4715b.i0(parcel);
+        Intent intent = null;
+        int iZ = 0;
+        int iZ2 = 0;
+        while (parcel.dataPosition() < iI0) {
+            int i10 = parcel.readInt();
+            char c10 = (char) i10;
+            if (c10 == 1) {
+                iZ = C4715b.Z(parcel, i10);
+            } else if (c10 == 2) {
+                iZ2 = C4715b.Z(parcel, i10);
+            } else if (c10 != 3) {
+                C4715b.h0(parcel, i10);
+            } else {
+                intent = (Intent) C4715b.C(parcel, i10, Intent.CREATOR);
+            }
+        }
+        C4715b.N(parcel, iI0);
+        return new b(iZ, iZ2, intent);
+    }
+
+    @Override // android.os.Parcelable.Creator
+    public final /* synthetic */ Object[] newArray(int i10) {
+        return new b[i10];
+    }
+}

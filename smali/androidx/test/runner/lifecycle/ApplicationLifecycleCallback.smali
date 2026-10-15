@@ -1,0 +1,19 @@
+###### Class androidx.test.runner.lifecycle.ApplicationLifecycleCallback (androidx.test.runner.lifecycle.ApplicationLifecycleCallback)
+.class public interface abstract Landroidx/test/runner/lifecycle/ApplicationLifecycleCallback;
+.super Ljava/lang/Object;
+.source "SourceFile"
+
+
+# virtual methods
+.method public abstract a(Landroid/app/Application;Landroidx/test/runner/lifecycle/ApplicationStage;)V
+    .annotation system Ldalvik/annotation/MethodParameters;
+        accessFlags = {
+            0x0,
+            0x0
+        }
+        names = {
+            "app",
+            "stage"
+        }
+    .end annotation
+.end method

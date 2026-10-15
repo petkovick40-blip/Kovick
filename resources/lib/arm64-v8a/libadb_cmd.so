@@ -1,0 +1,6 @@
+a="$1"
+hardwareTouchModeString="$2"
+noScreenshotModeString="$3"
+(app_process -Djava.class.path=$a /data/local/tmp --nice-name=jyandroid_native_service com.zjx.jyandroid.TouchService $a $hardwareTouchModeString $noScreenshotModeString > /dev/null 2>&1 &)
+sleep 1
+while pidof jyandroid_native_service; do sleep 3;done;

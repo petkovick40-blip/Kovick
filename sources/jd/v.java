@@ -1,0 +1,8 @@
+package jd;
+
+/* JADX INFO: loaded from: classes4.dex */
+public interface v {
+    boolean a();
+
+    byte[] e();
+}

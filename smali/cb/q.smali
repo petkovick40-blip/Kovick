@@ -1,0 +1,836 @@
+###### Class cb.C2108q (cb.q)
+.class public final Lcb/q;
+.super Ljava/lang/Object;
+.source "SourceFile"
+
+
+# annotations
+.annotation build LBa/s0;
+    value = {
+        "SMAP\nFastServiceLoader.kt\nKotlin\n*S Kotlin\n*F\n+ 1 FastServiceLoader.kt\nkotlinx/coroutines/internal/FastServiceLoader\n+ 2 fake.kt\nkotlin/jvm/internal/FakeKt\n+ 3 _Collections.kt\nkotlin/collections/CollectionsKt___CollectionsKt\n+ 4 _Strings.kt\nkotlin/text/StringsKt___StringsKt\n*L\n1#1,161:1\n77#1,5:162\n77#1,5:168\n131#1,13:183\n1#2:167\n1360#3:173\n1446#3,5:174\n1549#3:179\n1620#3,3:180\n1064#4,2:196\n*S KotlinDebug\n*F\n+ 1 FastServiceLoader.kt\nkotlinx/coroutines/internal/FastServiceLoader\n*L\n60#1:162,5\n61#1:168,5\n117#1:183,13\n99#1:173\n99#1:174,5\n101#1:179\n101#1:180,3\n153#1:196,2\n*E\n"
+    }
+.end annotation
+
+.annotation system Ldalvik/annotation/SourceDebugExtension;
+    value = "SMAP\nFastServiceLoader.kt\nKotlin\n*S Kotlin\n*F\n+ 1 FastServiceLoader.kt\nkotlinx/coroutines/internal/FastServiceLoader\n+ 2 fake.kt\nkotlin/jvm/internal/FakeKt\n+ 3 _Collections.kt\nkotlin/collections/CollectionsKt___CollectionsKt\n+ 4 _Strings.kt\nkotlin/text/StringsKt___StringsKt\n*L\n1#1,161:1\n77#1,5:162\n77#1,5:168\n131#1,13:183\n1#2:167\n1360#3:173\n1446#3,5:174\n1549#3:179\n1620#3,3:180\n1064#4,2:196\n*S KotlinDebug\n*F\n+ 1 FastServiceLoader.kt\nkotlinx/coroutines/internal/FastServiceLoader\n*L\n60#1:162,5\n61#1:168,5\n117#1:183,13\n99#1:173\n99#1:174,5\n101#1:179\n101#1:180,3\n153#1:196,2\n*E\n"
+.end annotation
+
+
+# static fields
+.field public static final a:Lcb/q;
+    .annotation build LCf/l;
+    .end annotation
+.end field
+
+.field public static final b:Ljava/lang/String; = "META-INF/services/"
+    .annotation build LCf/l;
+    .end annotation
+.end field
+
+
+# direct methods
+.method static constructor <clinit>()V
+    .registers 1
+
+    new-instance v0, Lcb/q;
+
+    invoke-direct {v0}, Ljava/lang/Object;-><init>()V
+
+    sput-object v0, Lcb/q;->a:Lcb/q;
+
+    return-void
+.end method
+
+.method public constructor <init>()V
+    .registers 1
+
+    invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+
+    return-void
+.end method
+
+
+# virtual methods
+.method public final a(Ljava/lang/Class;Ljava/lang/String;)Lcb/E;
+    .registers 6
+    .annotation system Ldalvik/annotation/Signature;
+        value = {
+            "(",
+            "Ljava/lang/Class<",
+            "Lcb/E;",
+            ">;",
+            "Ljava/lang/String;",
+            ")",
+            "Lcb/E;"
+        }
+    .end annotation
+
+    const/4 v0, 0x0
+
+    :try_start_1
+    invoke-virtual {p1}, Ljava/lang/Class;->getClassLoader()Ljava/lang/ClassLoader;
+
+    move-result-object v1
+
+    const/4 v2, 0x1
+
+    invoke-static {p2, v2, v1}, Ljava/lang/Class;->forName(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;
+
+    move-result-object p2
+
+    invoke-virtual {p2, v0}, Ljava/lang/Class;->getDeclaredConstructor([Ljava/lang/Class;)Ljava/lang/reflect/Constructor;
+
+    move-result-object p2
+
+    invoke-virtual {p2, v0}, Ljava/lang/reflect/Constructor;->newInstance([Ljava/lang/Object;)Ljava/lang/Object;
+
+    move-result-object p2
+
+    invoke-virtual {p1, p2}, Ljava/lang/Class;->cast(Ljava/lang/Object;)Ljava/lang/Object;
+
+    move-result-object p1
+
+    check-cast p1, Lcb/E;
+    :try_end_18
+    .catch Ljava/lang/ClassNotFoundException; {:try_start_1 .. :try_end_18} :catch_19
+
+    move-object v0, p1
+
+    :catch_19
+    return-object v0
+.end method
+
+.method public final b(Ljava/lang/String;Ljava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Object;
+    .registers 5
+    .annotation system Ldalvik/annotation/Signature;
+        value = {
+            "<S:",
+            "Ljava/lang/Object;",
+            ">(",
+            "Ljava/lang/String;",
+            "Ljava/lang/ClassLoader;",
+            "Ljava/lang/Class<",
+            "TS;>;)TS;"
+        }
+    .end annotation
+
+    const/4 v0, 0x0
+
+    invoke-static {p1, v0, p2}, Ljava/lang/Class;->forName(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;
+
+    move-result-object p1
+
+    invoke-virtual {p3, p1}, Ljava/lang/Class;->isAssignableFrom(Ljava/lang/Class;)Z
+
+    move-result p2
+
+    if-eqz p2, :cond_19
+
+    const/4 p2, 0x0
+
+    invoke-virtual {p1, p2}, Ljava/lang/Class;->getDeclaredConstructor([Ljava/lang/Class;)Ljava/lang/reflect/Constructor;
+
+    move-result-object p1
+
+    invoke-virtual {p1, p2}, Ljava/lang/reflect/Constructor;->newInstance([Ljava/lang/Object;)Ljava/lang/Object;
+
+    move-result-object p1
+
+    invoke-virtual {p3, p1}, Ljava/lang/Class;->cast(Ljava/lang/Object;)Ljava/lang/Object;
+
+    move-result-object p1
+
+    return-object p1
+
+    :cond_19
+    new-instance p2, Ljava/lang/StringBuilder;
+
+    const-string v0, "Expected service of class "
+
+    invoke-direct {p2, v0}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
+
+    invoke-virtual {p2, p3}, Ljava/lang/StringBuilder;->append(Ljava/lang/Object;)Ljava/lang/StringBuilder;
+
+    const-string p3, ", but found "
+
+    invoke-virtual {p2, p3}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    invoke-virtual {p2, p1}, Ljava/lang/StringBuilder;->append(Ljava/lang/Object;)Ljava/lang/StringBuilder;
+
+    invoke-virtual {p2}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+
+    move-result-object p1
+
+    new-instance p2, Ljava/lang/IllegalArgumentException;
+
+    invoke-virtual {p1}, Ljava/lang/Object;->toString()Ljava/lang/String;
+
+    move-result-object p1
+
+    invoke-direct {p2, p1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
+
+    throw p2
+.end method
+
+.method public final c(Ljava/lang/Class;Ljava/lang/ClassLoader;)Ljava/util/List;
+    .registers 3
+    .annotation system Ldalvik/annotation/Signature;
+        value = {
+            "<S:",
+            "Ljava/lang/Object;",
+            ">(",
+            "Ljava/lang/Class<",
+            "TS;>;",
+            "Ljava/lang/ClassLoader;",
+            ")",
+            "Ljava/util/List<",
+            "TS;>;"
+        }
+    .end annotation
+
+    :try_start_0
+    invoke-virtual {p0, p1, p2}, Lcb/q;->e(Ljava/lang/Class;Ljava/lang/ClassLoader;)Ljava/util/List;
+
+    move-result-object p1
+    :try_end_4
+    .catchall {:try_start_0 .. :try_end_4} :catchall_5
+
+    goto :goto_d
+
+    :catchall_5
+    invoke-static {p1, p2}, Ljava/util/ServiceLoader;->load(Ljava/lang/Class;Ljava/lang/ClassLoader;)Ljava/util/ServiceLoader;
+
+    move-result-object p1
+
+    invoke-static {p1}, Lea/V;->Y5(Ljava/lang/Iterable;)Ljava/util/List;
+
+    move-result-object p1
+
+    :goto_d
+    return-object p1
+.end method
+
+.method public final d()Ljava/util/List;
+    .registers 7
+    .annotation build LCf/l;
+    .end annotation
+
+    .annotation system Ldalvik/annotation/Signature;
+        value = {
+            "()",
+            "Ljava/util/List<",
+            "Lcb/E;",
+            ">;"
+        }
+    .end annotation
+
+    invoke-static {}, Lcb/r;->a()Z
+
+    move-result v0
+
+    const-class v1, Lcb/E;
+
+    if-nez v0, :cond_11
+
+    invoke-virtual {v1}, Ljava/lang/Class;->getClassLoader()Ljava/lang/ClassLoader;
+
+    move-result-object v0
+
+    invoke-virtual {p0, v1, v0}, Lcb/q;->c(Ljava/lang/Class;Ljava/lang/ClassLoader;)Ljava/util/List;
+
+    move-result-object v0
+
+    return-object v0
+
+    :cond_11
+    :try_start_11
+    new-instance v0, Ljava/util/ArrayList;
+
+    const/4 v2, 0x2
+
+    invoke-direct {v0, v2}, Ljava/util/ArrayList;-><init>(I)V
+
+    const-string v2, "Va.a"
+    :try_end_19
+    .catchall {:try_start_11 .. :try_end_19} :catchall_57
+
+    const/4 v3, 0x1
+
+    const/4 v4, 0x0
+
+    :try_start_1b
+    invoke-virtual {v1}, Ljava/lang/Class;->getClassLoader()Ljava/lang/ClassLoader;
+
+    move-result-object v5
+
+    invoke-static {v2, v3, v5}, Ljava/lang/Class;->forName(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;
+
+    move-result-object v2
+
+    invoke-virtual {v2, v4}, Ljava/lang/Class;->getDeclaredConstructor([Ljava/lang/Class;)Ljava/lang/reflect/Constructor;
+
+    move-result-object v2
+
+    invoke-virtual {v2, v4}, Ljava/lang/reflect/Constructor;->newInstance([Ljava/lang/Object;)Ljava/lang/Object;
+
+    move-result-object v2
+
+    invoke-virtual {v1, v2}, Ljava/lang/Class;->cast(Ljava/lang/Object;)Ljava/lang/Object;
+
+    move-result-object v2
+
+    check-cast v2, Lcb/E;
+    :try_end_31
+    .catch Ljava/lang/ClassNotFoundException; {:try_start_1b .. :try_end_31} :catch_32
+    .catchall {:try_start_1b .. :try_end_31} :catchall_57
+
+    goto :goto_33
+
+    :catch_32
+    move-object v2, v4
+
+    :goto_33
+    if-eqz v2, :cond_38
+
+    :try_start_35
+    invoke-virtual {v0, v2}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
+
+    :cond_38
+    const-string v2, "kotlinx.coroutines.test.internal.TestMainDispatcherFactory"
+    :try_end_3a
+    .catchall {:try_start_35 .. :try_end_3a} :catchall_57
+
+    :try_start_3a
+    invoke-virtual {v1}, Ljava/lang/Class;->getClassLoader()Ljava/lang/ClassLoader;
+
+    move-result-object v5
+
+    invoke-static {v2, v3, v5}, Ljava/lang/Class;->forName(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;
+
+    move-result-object v2
+
+    invoke-virtual {v2, v4}, Ljava/lang/Class;->getDeclaredConstructor([Ljava/lang/Class;)Ljava/lang/reflect/Constructor;
+
+    move-result-object v2
+
+    invoke-virtual {v2, v4}, Ljava/lang/reflect/Constructor;->newInstance([Ljava/lang/Object;)Ljava/lang/Object;
+
+    move-result-object v2
+
+    invoke-virtual {v1, v2}, Ljava/lang/Class;->cast(Ljava/lang/Object;)Ljava/lang/Object;
+
+    move-result-object v2
+
+    check-cast v2, Lcb/E;
+    :try_end_50
+    .catch Ljava/lang/ClassNotFoundException; {:try_start_3a .. :try_end_50} :catch_51
+    .catchall {:try_start_3a .. :try_end_50} :catchall_57
+
+    move-object v4, v2
+
+    :catch_51
+    if-eqz v4, :cond_5f
+
+    :try_start_53
+    invoke-virtual {v0, v4}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
+    :try_end_56
+    .catchall {:try_start_53 .. :try_end_56} :catchall_57
+
+    goto :goto_5f
+
+    :catchall_57
+    invoke-virtual {v1}, Ljava/lang/Class;->getClassLoader()Ljava/lang/ClassLoader;
+
+    move-result-object v0
+
+    invoke-virtual {p0, v1, v0}, Lcb/q;->c(Ljava/lang/Class;Ljava/lang/ClassLoader;)Ljava/util/List;
+
+    move-result-object v0
+
+    :cond_5f
+    :goto_5f
+    return-object v0
+.end method
+
+.method public final e(Ljava/lang/Class;Ljava/lang/ClassLoader;)Ljava/util/List;
+    .registers 7
+    .param p1    # Ljava/lang/Class;
+        .annotation build LCf/l;
+        .end annotation
+    .end param
+    .param p2    # Ljava/lang/ClassLoader;
+        .annotation build LCf/l;
+        .end annotation
+    .end param
+    .annotation build LCf/l;
+    .end annotation
+
+    .annotation system Ldalvik/annotation/Signature;
+        value = {
+            "<S:",
+            "Ljava/lang/Object;",
+            ">(",
+            "Ljava/lang/Class<",
+            "TS;>;",
+            "Ljava/lang/ClassLoader;",
+            ")",
+            "Ljava/util/List<",
+            "TS;>;"
+        }
+    .end annotation
+
+    invoke-virtual {p1}, Ljava/lang/Class;->getName()Ljava/lang/String;
+
+    move-result-object v0
+
+    const-string v1, "META-INF/services/"
+
+    invoke-virtual {v1, v0}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v0
+
+    invoke-virtual {p2, v0}, Ljava/lang/ClassLoader;->getResources(Ljava/lang/String;)Ljava/util/Enumeration;
+
+    move-result-object v0
+
+    invoke-static {v0}, Ljava/util/Collections;->list(Ljava/util/Enumeration;)Ljava/util/ArrayList;
+
+    move-result-object v0
+
+    const-string v1, "list(this)"
+
+    invoke-static {v0, v1}, LBa/L;->o(Ljava/lang/Object;Ljava/lang/String;)V
+
+    new-instance v1, Ljava/util/ArrayList;
+
+    invoke-direct {v1}, Ljava/util/ArrayList;-><init>()V
+
+    invoke-interface {v0}, Ljava/lang/Iterable;->iterator()Ljava/util/Iterator;
+
+    move-result-object v0
+
+    :goto_20
+    invoke-interface {v0}, Ljava/util/Iterator;->hasNext()Z
+
+    move-result v2
+
+    if-eqz v2, :cond_36
+
+    invoke-interface {v0}, Ljava/util/Iterator;->next()Ljava/lang/Object;
+
+    move-result-object v2
+
+    check-cast v2, Ljava/net/URL;
+
+    sget-object v3, Lcb/q;->a:Lcb/q;
+
+    invoke-virtual {v3, v2}, Lcb/q;->f(Ljava/net/URL;)Ljava/util/List;
+
+    move-result-object v2
+
+    invoke-static {v1, v2}, Lea/O;->r0(Ljava/util/Collection;Ljava/lang/Iterable;)Z
+
+    goto :goto_20
+
+    :cond_36
+    invoke-static {v1}, Lea/V;->d6(Ljava/lang/Iterable;)Ljava/util/Set;
+
+    move-result-object v0
+
+    invoke-interface {v0}, Ljava/util/Collection;->isEmpty()Z
+
+    move-result v1
+
+    if-nez v1, :cond_66
+
+    new-instance v1, Ljava/util/ArrayList;
+
+    const/16 v2, 0xa
+
+    invoke-static {v0, v2}, Lea/K;->b0(Ljava/lang/Iterable;I)I
+
+    move-result v2
+
+    invoke-direct {v1, v2}, Ljava/util/ArrayList;-><init>(I)V
+
+    invoke-interface {v0}, Ljava/lang/Iterable;->iterator()Ljava/util/Iterator;
+
+    move-result-object v0
+
+    :goto_4f
+    invoke-interface {v0}, Ljava/util/Iterator;->hasNext()Z
+
+    move-result v2
+
+    if-eqz v2, :cond_65
+
+    invoke-interface {v0}, Ljava/util/Iterator;->next()Ljava/lang/Object;
+
+    move-result-object v2
+
+    check-cast v2, Ljava/lang/String;
+
+    sget-object v3, Lcb/q;->a:Lcb/q;
+
+    invoke-virtual {v3, v2, p2, p1}, Lcb/q;->b(Ljava/lang/String;Ljava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Object;
+
+    move-result-object v2
+
+    invoke-interface {v1, v2}, Ljava/util/Collection;->add(Ljava/lang/Object;)Z
+
+    goto :goto_4f
+
+    :cond_65
+    return-object v1
+
+    :cond_66
+    new-instance p1, Ljava/lang/IllegalArgumentException;
+
+    const-string p2, "No providers were loaded with FastServiceLoader"
+
+    invoke-direct {p1, p2}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
+
+    throw p1
+.end method
+
+.method public final f(Ljava/net/URL;)Ljava/util/List;
+    .registers 7
+    .annotation system Ldalvik/annotation/Signature;
+        value = {
+            "(",
+            "Ljava/net/URL;",
+            ")",
+            "Ljava/util/List<",
+            "Ljava/lang/String;",
+            ">;"
+        }
+    .end annotation
+
+    invoke-virtual {p1}, Ljava/net/URL;->toString()Ljava/lang/String;
+
+    move-result-object v0
+
+    const-string v1, "jar"
+
+    const/4 v2, 0x0
+
+    const/4 v3, 0x2
+
+    const/4 v4, 0x0
+
+    invoke-static {v0, v1, v2, v3, v4}, LPa/L;->B2(Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)Z
+
+    move-result v1
+
+    if-eqz v1, :cond_5c
+
+    const-string p1, "jar:file:"
+
+    invoke-static {v0, p1, v4, v3, v4}, LPa/T;->E5(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ljava/lang/String;
+
+    move-result-object p1
+
+    const/16 v1, 0x21
+
+    invoke-static {p1, v1, v4, v3, v4}, LPa/T;->L5(Ljava/lang/String;CLjava/lang/String;ILjava/lang/Object;)Ljava/lang/String;
+
+    move-result-object p1
+
+    const-string v1, "!/"
+
+    invoke-static {v0, v1, v4, v3, v4}, LPa/T;->E5(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ljava/lang/String;
+
+    move-result-object v0
+
+    new-instance v1, Ljava/util/jar/JarFile;
+
+    invoke-direct {v1, p1, v2}, Ljava/util/jar/JarFile;-><init>(Ljava/lang/String;Z)V
+
+    :try_start_26
+    new-instance p1, Ljava/io/BufferedReader;
+
+    new-instance v2, Ljava/io/InputStreamReader;
+
+    new-instance v3, Ljava/util/zip/ZipEntry;
+
+    invoke-direct {v3, v0}, Ljava/util/zip/ZipEntry;-><init>(Ljava/lang/String;)V
+
+    invoke-virtual {v1, v3}, Ljava/util/jar/JarFile;->getInputStream(Ljava/util/zip/ZipEntry;)Ljava/io/InputStream;
+
+    move-result-object v0
+
+    const-string v3, "UTF-8"
+
+    invoke-direct {v2, v0, v3}, Ljava/io/InputStreamReader;-><init>(Ljava/io/InputStream;Ljava/lang/String;)V
+
+    invoke-direct {p1, v2}, Ljava/io/BufferedReader;-><init>(Ljava/io/Reader;)V
+    :try_end_3b
+    .catchall {:try_start_26 .. :try_end_3b} :catchall_48
+
+    :try_start_3b
+    sget-object v0, Lcb/q;->a:Lcb/q;
+
+    invoke-virtual {v0, p1}, Lcb/q;->g(Ljava/io/BufferedReader;)Ljava/util/List;
+
+    move-result-object v0
+    :try_end_41
+    .catchall {:try_start_3b .. :try_end_41} :catchall_4a
+
+    :try_start_41
+    invoke-static {p1, v4}, Lua/c;->a(Ljava/io/Closeable;Ljava/lang/Throwable;)V
+    :try_end_44
+    .catchall {:try_start_41 .. :try_end_44} :catchall_48
+
+    invoke-virtual {v1}, Ljava/util/zip/ZipFile;->close()V
+
+    return-object v0
+
+    :catchall_48
+    move-exception p1
+
+    goto :goto_51
+
+    :catchall_4a
+    move-exception v0
+
+    :try_start_4b
+    throw v0
+    :try_end_4c
+    .catchall {:try_start_4b .. :try_end_4c} :catchall_4c
+
+    :catchall_4c
+    move-exception v2
+
+    :try_start_4d
+    invoke-static {p1, v0}, Lua/c;->a(Ljava/io/Closeable;Ljava/lang/Throwable;)V
+
+    throw v2
+    :try_end_51
+    .catchall {:try_start_4d .. :try_end_51} :catchall_48
+
+    :goto_51
+    :try_start_51
+    throw p1
+    :try_end_52
+    .catchall {:try_start_51 .. :try_end_52} :catchall_52
+
+    :catchall_52
+    move-exception v0
+
+    :try_start_53
+    invoke-virtual {v1}, Ljava/util/zip/ZipFile;->close()V
+    :try_end_56
+    .catchall {:try_start_53 .. :try_end_56} :catchall_57
+
+    throw v0
+
+    :catchall_57
+    move-exception v0
+
+    invoke-static {p1, v0}, Lca/q;->a(Ljava/lang/Throwable;Ljava/lang/Throwable;)V
+
+    throw p1
+
+    :cond_5c
+    new-instance v0, Ljava/io/BufferedReader;
+
+    new-instance v1, Ljava/io/InputStreamReader;
+
+    invoke-virtual {p1}, Ljava/net/URL;->openStream()Ljava/io/InputStream;
+
+    move-result-object p1
+
+    invoke-direct {v1, p1}, Ljava/io/InputStreamReader;-><init>(Ljava/io/InputStream;)V
+
+    invoke-direct {v0, v1}, Ljava/io/BufferedReader;-><init>(Ljava/io/Reader;)V
+
+    :try_start_6a
+    sget-object p1, Lcb/q;->a:Lcb/q;
+
+    invoke-virtual {p1, v0}, Lcb/q;->g(Ljava/io/BufferedReader;)Ljava/util/List;
+
+    move-result-object p1
+    :try_end_70
+    .catchall {:try_start_6a .. :try_end_70} :catchall_74
+
+    invoke-static {v0, v4}, Lua/c;->a(Ljava/io/Closeable;Ljava/lang/Throwable;)V
+
+    return-object p1
+
+    :catchall_74
+    move-exception p1
+
+    :try_start_75
+    throw p1
+    :try_end_76
+    .catchall {:try_start_75 .. :try_end_76} :catchall_76
+
+    :catchall_76
+    move-exception v1
+
+    invoke-static {v0, p1}, Lua/c;->a(Ljava/io/Closeable;Ljava/lang/Throwable;)V
+
+    throw v1
+.end method
+
+.method public final g(Ljava/io/BufferedReader;)Ljava/util/List;
+    .registers 7
+    .annotation system Ldalvik/annotation/Signature;
+        value = {
+            "(",
+            "Ljava/io/BufferedReader;",
+            ")",
+            "Ljava/util/List<",
+            "Ljava/lang/String;",
+            ">;"
+        }
+    .end annotation
+
+    new-instance v0, Ljava/util/LinkedHashSet;
+
+    invoke-direct {v0}, Ljava/util/LinkedHashSet;-><init>()V
+
+    :cond_5
+    :goto_5
+    invoke-virtual {p1}, Ljava/io/BufferedReader;->readLine()Ljava/lang/String;
+
+    move-result-object v1
+
+    if-nez v1, :cond_10
+
+    invoke-static {v0}, Lea/V;->Y5(Ljava/lang/Iterable;)Ljava/util/List;
+
+    move-result-object p1
+
+    return-object p1
+
+    :cond_10
+    const-string v2, "#"
+
+    const/4 v3, 0x2
+
+    const/4 v4, 0x0
+
+    invoke-static {v1, v2, v4, v3, v4}, LPa/T;->M5(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ljava/lang/String;
+
+    move-result-object v1
+
+    invoke-static {v1}, LPa/T;->T5(Ljava/lang/CharSequence;)Ljava/lang/CharSequence;
+
+    move-result-object v1
+
+    invoke-virtual {v1}, Ljava/lang/Object;->toString()Ljava/lang/String;
+
+    move-result-object v1
+
+    const/4 v2, 0x0
+
+    :goto_21
+    invoke-interface {v1}, Ljava/lang/CharSequence;->length()I
+
+    move-result v3
+
+    if-ge v2, v3, :cond_49
+
+    invoke-interface {v1, v2}, Ljava/lang/CharSequence;->charAt(I)C
+
+    move-result v3
+
+    const/16 v4, 0x2e
+
+    if-eq v3, v4, :cond_46
+
+    invoke-static {v3}, Ljava/lang/Character;->isJavaIdentifierPart(C)Z
+
+    move-result v3
+
+    if-eqz v3, :cond_36
+
+    goto :goto_46
+
+    :cond_36
+    const-string p1, "Illegal service provider class name: "
+
+    invoke-static {p1, v1}, LC/c;->a(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object p1
+
+    new-instance v0, Ljava/lang/IllegalArgumentException;
+
+    invoke-virtual {p1}, Ljava/lang/Object;->toString()Ljava/lang/String;
+
+    move-result-object p1
+
+    invoke-direct {v0, p1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
+
+    throw v0
+
+    :cond_46
+    :goto_46
+    add-int/lit8 v2, v2, 0x1
+
+    goto :goto_21
+
+    :cond_49
+    invoke-interface {v1}, Ljava/lang/CharSequence;->length()I
+
+    move-result v2
+
+    if-lez v2, :cond_5
+
+    invoke-interface {v0, v1}, Ljava/util/Set;->add(Ljava/lang/Object;)Z
+
+    goto :goto_5
+.end method
+
+.method public final h(Ljava/util/jar/JarFile;LAa/l;)Ljava/lang/Object;
+    .registers 4
+    .annotation system Ldalvik/annotation/Signature;
+        value = {
+            "<R:",
+            "Ljava/lang/Object;",
+            ">(",
+            "Ljava/util/jar/JarFile;",
+            "LAa/l<",
+            "-",
+            "Ljava/util/jar/JarFile;",
+            "+TR;>;)TR;"
+        }
+    .end annotation
+
+    :try_start_0
+    invoke-interface {p2, p1}, LAa/l;->E(Ljava/lang/Object;)Ljava/lang/Object;
+
+    move-result-object p2
+    :try_end_4
+    .catchall {:try_start_0 .. :try_end_4} :catchall_8
+
+    invoke-virtual {p1}, Ljava/util/zip/ZipFile;->close()V
+
+    return-object p2
+
+    :catchall_8
+    move-exception p2
+
+    :try_start_9
+    throw p2
+    :try_end_a
+    .catchall {:try_start_9 .. :try_end_a} :catchall_a
+
+    :catchall_a
+    move-exception v0
+
+    :try_start_b
+    invoke-virtual {p1}, Ljava/util/zip/ZipFile;->close()V
+    :try_end_e
+    .catchall {:try_start_b .. :try_end_e} :catchall_f
+
+    throw v0
+
+    :catchall_f
+    move-exception p1
+
+    invoke-static {p2, p1}, Lca/q;->a(Ljava/lang/Throwable;Ljava/lang/Throwable;)V
+
+    throw p2
+.end method

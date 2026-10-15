@@ -1,0 +1,37 @@
+###### Class h6.l (h6.l)
+.class public interface abstract annotation Lh6/l;
+.super Ljava/lang/Object;
+.source "SourceFile"
+
+# interfaces
+.implements Ljava/lang/annotation/Annotation;
+
+
+# annotations
+.annotation system Ldalvik/annotation/AnnotationDefault;
+    value = .subannotation Lh6/l;
+        imports = {}
+        staticImports = {}
+    .end subannotation
+.end annotation
+
+.annotation runtime Ljava/lang/annotation/Documented;
+.end annotation
+
+.annotation runtime Ljava/lang/annotation/Target;
+    value = {
+        .enum Ljava/lang/annotation/ElementType;->METHOD:Ljava/lang/annotation/ElementType;,
+        .enum Ljava/lang/annotation/ElementType;->CONSTRUCTOR:Ljava/lang/annotation/ElementType;
+    }
+.end annotation
+
+
+# virtual methods
+.method public abstract imports()[Ljava/lang/String;
+.end method
+
+.method public abstract replacement()Ljava/lang/String;
+.end method
+
+.method public abstract staticImports()[Ljava/lang/String;
+.end method

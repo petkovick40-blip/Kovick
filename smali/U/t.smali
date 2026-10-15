@@ -1,0 +1,16 @@
+###### Class U.C1351t (U.t)
+.class public final synthetic LU/t;
+.super Ljava/lang/Object;
+.source "SourceFile"
+
+
+# direct methods
+.method public static bridge synthetic a(Landroid/app/NotificationChannel;)Ljava/lang/String;
+    .registers 1
+
+    invoke-virtual {p0}, Landroid/app/NotificationChannel;->getParentChannelId()Ljava/lang/String;
+
+    move-result-object p0
+
+    return-object p0
+.end method

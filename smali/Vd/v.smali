@@ -1,0 +1,273 @@
+###### Class Vd.C1468v (Vd.v)
+.class public final LVd/v;
+.super Ljava/lang/Object;
+.source "SourceFile"
+
+
+# annotations
+.annotation system Ldalvik/annotation/MemberClasses;
+    value = {
+        LVd/v$a;,
+        LVd/v$b;
+    }
+.end annotation
+
+
+# direct methods
+.method public constructor <init>()V
+    .registers 1
+
+    invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+
+    return-void
+.end method
+
+###### Class Vd.C1468v.a (Vd.v$a)
+.class public LVd/v$a;
+.super LXd/a;
+.source "SourceFile"
+
+
+# annotations
+.annotation system Ldalvik/annotation/EnclosingClass;
+    value = LVd/v;
+.end annotation
+
+.annotation system Ldalvik/annotation/InnerClass;
+    accessFlags = 0x9
+    name = "a"
+.end annotation
+
+
+# static fields
+.field public static final a:Ljava/lang/String;
+
+
+# direct methods
+.method static constructor <clinit>()V
+    .registers 1
+
+    const-class v0, LVd/v;
+
+    invoke-virtual {v0}, Ljava/lang/Class;->getName()Ljava/lang/String;
+
+    move-result-object v0
+
+    sput-object v0, LVd/v$a;->a:Ljava/lang/String;
+
+    return-void
+.end method
+
+.method public constructor <init>()V
+    .registers 1
+
+    invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+
+    return-void
+.end method
+
+
+# virtual methods
+.method public a(LNd/a;)V
+    .registers 6
+
+    new-instance v0, Ljava/lang/StringBuilder;
+
+    invoke-direct {v0}, Ljava/lang/StringBuilder;-><init>()V
+
+    sget-object v1, LVd/v$a;->a:Ljava/lang/String;
+
+    const-string v2, "$PBKDF"
+
+    const-string v3, "SecretKeyFactory.PBKDF-OPENSSL"
+
+    invoke-static {v0, v1, v2, p1, v3}, LOd/h;->a(Ljava/lang/StringBuilder;Ljava/lang/String;Ljava/lang/String;LNd/a;Ljava/lang/String;)V
+
+    return-void
+.end method
+
+###### Class Vd.C1468v.b (Vd.v$b)
+.class public LVd/v$b;
+.super LWd/g;
+.source "SourceFile"
+
+
+# annotations
+.annotation system Ldalvik/annotation/EnclosingClass;
+    value = LVd/v;
+.end annotation
+
+.annotation system Ldalvik/annotation/InnerClass;
+    accessFlags = 0x9
+    name = "b"
+.end annotation
+
+
+# direct methods
+.method public constructor <init>()V
+    .registers 3
+
+    const-string v0, "PBKDF-OpenSSL"
+
+    const/4 v1, 0x0
+
+    invoke-direct {p0, v0, v1}, LWd/g;-><init>(Ljava/lang/String;Lob/C;)V
+
+    return-void
+.end method
+
+
+# virtual methods
+.method public engineGenerateSecret(Ljava/security/spec/KeySpec;)Ljavax/crypto/SecretKey;
+    .registers 5
+    .annotation system Ldalvik/annotation/Throws;
+        value = {
+            Ljava/security/spec/InvalidKeySpecException;
+        }
+    .end annotation
+
+    instance-of v0, p1, Ljavax/crypto/spec/PBEKeySpec;
+
+    if-eqz v0, :cond_89
+
+    check-cast p1, Ljavax/crypto/spec/PBEKeySpec;
+
+    invoke-virtual {p1}, Ljavax/crypto/spec/PBEKeySpec;->getSalt()[B
+
+    move-result-object v0
+
+    if-eqz v0, :cond_81
+
+    invoke-virtual {p1}, Ljavax/crypto/spec/PBEKeySpec;->getIterationCount()I
+
+    move-result v0
+
+    if-lez v0, :cond_69
+
+    invoke-virtual {p1}, Ljavax/crypto/spec/PBEKeySpec;->getKeyLength()I
+
+    move-result v0
+
+    if-lez v0, :cond_51
+
+    invoke-virtual {p1}, Ljavax/crypto/spec/PBEKeySpec;->getPassword()[C
+
+    move-result-object v0
+
+    array-length v0, v0
+
+    if-eqz v0, :cond_49
+
+    new-instance v0, LQc/G;
+
+    invoke-direct {v0}, LQc/G;-><init>()V
+
+    invoke-virtual {p1}, Ljavax/crypto/spec/PBEKeySpec;->getPassword()[C
+
+    move-result-object v1
+
+    invoke-static {v1}, Lof/y;->n([C)[B
+
+    move-result-object v1
+
+    invoke-virtual {p1}, Ljavax/crypto/spec/PBEKeySpec;->getSalt()[B
+
+    move-result-object v2
+
+    invoke-virtual {v0, v1, v2}, LQc/G;->l([B[B)V
+
+    new-instance v1, Ljavax/crypto/spec/SecretKeySpec;
+
+    invoke-virtual {p1}, Ljavax/crypto/spec/PBEKeySpec;->getKeyLength()I
+
+    move-result p1
+
+    invoke-virtual {v0, p1}, LQc/G;->e(I)LEc/k;
+
+    move-result-object p1
+
+    check-cast p1, LYc/o0;
+
+    invoke-virtual {p1}, LYc/o0;->a()[B
+
+    move-result-object p1
+
+    const-string v0, "OpenSSLPBKDF"
+
+    invoke-direct {v1, p1, v0}, Ljavax/crypto/spec/SecretKeySpec;-><init>([BLjava/lang/String;)V
+
+    return-object v1
+
+    :cond_49
+    new-instance p1, Ljava/lang/IllegalArgumentException;
+
+    const-string v0, "password empty"
+
+    invoke-direct {p1, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
+
+    throw p1
+
+    :cond_51
+    new-instance v0, Ljava/security/spec/InvalidKeySpecException;
+
+    new-instance v1, Ljava/lang/StringBuilder;
+
+    const-string v2, "positive key length required: "
+
+    invoke-direct {v1, v2}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
+
+    invoke-virtual {p1}, Ljavax/crypto/spec/PBEKeySpec;->getKeyLength()I
+
+    move-result p1
+
+    invoke-virtual {v1, p1}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
+
+    invoke-virtual {v1}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+
+    move-result-object p1
+
+    invoke-direct {v0, p1}, Ljava/security/spec/InvalidKeySpecException;-><init>(Ljava/lang/String;)V
+
+    throw v0
+
+    :cond_69
+    new-instance v0, Ljava/security/spec/InvalidKeySpecException;
+
+    new-instance v1, Ljava/lang/StringBuilder;
+
+    const-string v2, "positive iteration count required: "
+
+    invoke-direct {v1, v2}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
+
+    invoke-virtual {p1}, Ljavax/crypto/spec/PBEKeySpec;->getIterationCount()I
+
+    move-result p1
+
+    invoke-virtual {v1, p1}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
+
+    invoke-virtual {v1}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+
+    move-result-object p1
+
+    invoke-direct {v0, p1}, Ljava/security/spec/InvalidKeySpecException;-><init>(Ljava/lang/String;)V
+
+    throw v0
+
+    :cond_81
+    new-instance p1, Ljava/security/spec/InvalidKeySpecException;
+
+    const-string v0, "missing required salt"
+
+    invoke-direct {p1, v0}, Ljava/security/spec/InvalidKeySpecException;-><init>(Ljava/lang/String;)V
+
+    throw p1
+
+    :cond_89
+    new-instance p1, Ljava/security/spec/InvalidKeySpecException;
+
+    const-string v0, "Invalid KeySpec"
+
+    invoke-direct {p1, v0}, Ljava/security/spec/InvalidKeySpecException;-><init>(Ljava/lang/String;)V
+
+    throw p1
+.end method

@@ -1,0 +1,17 @@
+package r5;
+
+import h.c0;
+
+/* JADX INFO: loaded from: classes.dex */
+@h.c0({c0.a.LIBRARY_GROUP})
+public enum W2 {
+    MONOCHROME,
+    NEUTRAL,
+    TONAL_SPOT,
+    VIBRANT,
+    EXPRESSIVE,
+    FIDELITY,
+    CONTENT,
+    RAINBOW,
+    FRUIT_SALAD
+}

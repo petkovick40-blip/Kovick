@@ -1,0 +1,16 @@
+###### Class t0.H0 (t0.H0)
+.class public final synthetic Lt0/H0;
+.super Ljava/lang/Object;
+.source "SourceFile"
+
+
+# direct methods
+.method public static bridge synthetic a(Landroid/view/WindowInsetsAnimation$Bounds;)Landroid/graphics/Insets;
+    .registers 1
+
+    invoke-virtual {p0}, Landroid/view/WindowInsetsAnimation$Bounds;->getUpperBound()Landroid/graphics/Insets;
+
+    move-result-object p0
+
+    return-object p0
+.end method

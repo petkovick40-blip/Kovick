@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@color/jy_blue_1"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.5">
+        <TextView
+            android:textSize="@dimen/font_size_text_phone"
+            android:textColor="@color/white"
+            android:gravity="center_vertical"
+            android:id="@+id/textView"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="TextView"
+            android:layout_weight="0"
+            android:layout_marginStart="10dp"/>
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1"/>
+        <Button
+            android:textSize="@dimen/font_size_text_phone"
+            android:textColor="@color/jy_blue_1"
+            android:background="@drawable/rounded_button_background_5dp"
+            android:clickable="false"
+            android:layout_width="35dp"
+            android:layout_height="25dp"
+            android:text="@string/add"
+            android:layout_weight="0"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:layout_marginEnd="10dp"
+            android:backgroundTint="@color/white"/>
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,14 @@
+###### Class t0.V0 (t0.V0)
+.class public final synthetic Lt0/V0;
+.super Ljava/lang/Object;
+.source "SourceFile"
+
+
+# direct methods
+.method public static bridge synthetic a(Landroid/view/WindowInsetsAnimationController;Landroid/graphics/Insets;FF)V
+    .registers 4
+
+    invoke-interface {p0, p1, p2, p3}, Landroid/view/WindowInsetsAnimationController;->setInsetsAndAlpha(Landroid/graphics/Insets;FF)V
+
+    return-void
+.end method

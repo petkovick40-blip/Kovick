@@ -1,0 +1,17 @@
+###### Class androidx.test.runner.intent.IntentCallback (androidx.test.runner.intent.IntentCallback)
+.class public interface abstract Landroidx/test/runner/intent/IntentCallback;
+.super Ljava/lang/Object;
+.source "SourceFile"
+
+
+# virtual methods
+.method public abstract a(Landroid/content/Intent;)V
+    .annotation system Ldalvik/annotation/MethodParameters;
+        accessFlags = {
+            0x0
+        }
+        names = {
+            "intent"
+        }
+    .end annotation
+.end method

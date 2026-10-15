@@ -1,0 +1,18 @@
+###### Class Wa.x (Wa.x)
+.class public final LWa/x;
+.super Ljava/lang/IllegalStateException;
+.source "SourceFile"
+
+
+# direct methods
+.method public constructor <init>(Ljava/lang/String;)V
+    .registers 2
+    .param p1    # Ljava/lang/String;
+        .annotation build LCf/m;
+        .end annotation
+    .end param
+
+    invoke-direct {p0, p1}, Ljava/lang/IllegalStateException;-><init>(Ljava/lang/String;)V
+
+    return-void
+.end method

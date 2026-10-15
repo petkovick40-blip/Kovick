@@ -1,0 +1,113 @@
+package Oc;
+
+import Ec.C0980n;
+import Gc.c;
+import Gc.d;
+import Gc.e;
+import Gc.f;
+import Kc.E;
+import java.io.PrintStream;
+import java.math.BigInteger;
+import java.security.SecureRandom;
+
+/* JADX INFO: loaded from: classes4.dex */
+public class b {
+    public static BigInteger a(BigInteger bigInteger) {
+        E e10 = new E();
+        byte[] byteArray = bigInteger.toByteArray();
+        byte[] bArr = new byte[32];
+        e10.update(byteArray, 0, byteArray.length);
+        e10.c(bArr, 0);
+        return new BigInteger(bArr);
+    }
+
+    public static void b(String[] strArr) throws C0980n {
+        Gc.b bVar = c.f7482c;
+        BigInteger bigIntegerB = bVar.b();
+        BigInteger bigIntegerC = bVar.c();
+        BigInteger bigIntegerA = bVar.a();
+        PrintStream printStream = System.out;
+        printStream.println("********* Initialization **********");
+        printStream.println("Public parameters for the cyclic group:");
+        printStream.println("p (" + bigIntegerB.bitLength() + " bits): " + bigIntegerB.toString(16));
+        printStream.println("q (" + bigIntegerC.bitLength() + " bits): " + bigIntegerC.toString(16));
+        printStream.println("g (" + bigIntegerB.bitLength() + " bits): " + bigIntegerA.toString(16));
+        StringBuilder sb2 = new StringBuilder("p mod q = ");
+        sb2.append(bigIntegerB.mod(bigIntegerC).toString(16));
+        printStream.println(sb2.toString());
+        printStream.println("g^{q} mod p = " + bigIntegerA.modPow(bigIntegerC, bigIntegerB).toString(16));
+        printStream.println("");
+        printStream.println("(Secret passwords used by Alice and Bob: \"password\" and \"password\")\n");
+        E e10 = new E();
+        SecureRandom secureRandom = new SecureRandom();
+        Gc.a aVar = new Gc.a("alice", "password".toCharArray(), bVar, e10, secureRandom);
+        Gc.a aVar2 = new Gc.a("bob", "password".toCharArray(), bVar, e10, secureRandom);
+        d dVarB = aVar.b();
+        d dVarB2 = aVar2.b();
+        printStream.println("************ Round 1 **************");
+        printStream.println("Alice sends to Bob: ");
+        printStream.println("g^{x1}=" + dVarB.a().toString(16));
+        printStream.println("g^{x2}=" + dVarB.b().toString(16));
+        printStream.println("KP{x1}={" + dVarB.c()[0].toString(16) + "};{" + dVarB.c()[1].toString(16) + "}");
+        printStream.println("KP{x2}={" + dVarB.d()[0].toString(16) + "};{" + dVarB.d()[1].toString(16) + "}");
+        printStream.println("");
+        printStream.println("Bob sends to Alice: ");
+        StringBuilder sb3 = new StringBuilder("g^{x3}=");
+        sb3.append(dVarB2.a().toString(16));
+        printStream.println(sb3.toString());
+        printStream.println("g^{x4}=" + dVarB2.b().toString(16));
+        printStream.println("KP{x3}={" + dVarB2.c()[0].toString(16) + "};{" + dVarB2.c()[1].toString(16) + "}");
+        printStream.println("KP{x4}={" + dVarB2.d()[0].toString(16) + "};{" + dVarB2.d()[1].toString(16) + "}");
+        printStream.println("");
+        aVar.f(dVarB2);
+        printStream.println("Alice checks g^{x4}!=1: OK");
+        printStream.println("Alice checks KP{x3}: OK");
+        printStream.println("Alice checks KP{x4}: OK");
+        printStream.println("");
+        aVar2.f(dVarB);
+        printStream.println("Bob checks g^{x2}!=1: OK");
+        printStream.println("Bob checks KP{x1},: OK");
+        printStream.println("Bob checks KP{x2},: OK");
+        printStream.println("");
+        e eVarC = aVar.c();
+        e eVarC2 = aVar2.c();
+        printStream.println("************ Round 2 **************");
+        printStream.println("Alice sends to Bob: ");
+        printStream.println("A=" + eVarC.a().toString(16));
+        printStream.println("KP{x2*s}={" + eVarC.b()[0].toString(16) + "},{" + eVarC.b()[1].toString(16) + "}");
+        printStream.println("");
+        printStream.println("Bob sends to Alice");
+        StringBuilder sb4 = new StringBuilder("B=");
+        sb4.append(eVarC2.a().toString(16));
+        printStream.println(sb4.toString());
+        printStream.println("KP{x4*s}={" + eVarC2.b()[0].toString(16) + "},{" + eVarC2.b()[1].toString(16) + "}");
+        printStream.println("");
+        aVar.g(eVarC2);
+        printStream.println("Alice checks KP{x4*s}: OK\n");
+        aVar2.g(eVarC);
+        printStream.println("Bob checks KP{x2*s}: OK\n");
+        BigInteger bigIntegerA2 = aVar.a();
+        BigInteger bigIntegerA3 = aVar2.a();
+        printStream.println("********* After round 2 ***********");
+        printStream.println("Alice computes key material \t K=" + bigIntegerA2.toString(16));
+        printStream.println("Bob computes key material \t K=" + bigIntegerA3.toString(16));
+        printStream.println();
+        a(bigIntegerA2);
+        a(bigIntegerA3);
+        f fVarD = aVar.d(bigIntegerA2);
+        f fVarD2 = aVar2.d(bigIntegerA3);
+        printStream.println("************ Round 3 **************");
+        printStream.println("Alice sends to Bob: ");
+        printStream.println("MacTag=" + fVarD.a().toString(16));
+        printStream.println("");
+        printStream.println("Bob sends to Alice: ");
+        printStream.println("MacTag=" + fVarD2.a().toString(16));
+        printStream.println("");
+        aVar.h(fVarD2, bigIntegerA2);
+        printStream.println("Alice checks MacTag: OK\n");
+        aVar2.h(fVarD, bigIntegerA3);
+        printStream.println("Bob checks MacTag: OK\n");
+        printStream.println();
+        printStream.println("MacTags validated, therefore the keying material matches.");
+    }
+}

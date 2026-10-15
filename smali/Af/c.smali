@@ -1,0 +1,195 @@
+###### Class Af.c (Af.c)
+.class public LAf/c;
+.super Ljava/lang/Object;
+.source "SourceFile"
+
+
+# instance fields
+.field public final a:Ljava/util/Map;
+    .annotation system Ldalvik/annotation/Signature;
+        value = {
+            "Ljava/util/Map<",
+            "Ljava/lang/Class<",
+            "+",
+            "Ljava/lang/Throwable;",
+            ">;",
+            "Ljava/lang/Integer;",
+            ">;"
+        }
+    .end annotation
+.end field
+
+
+# direct methods
+.method public constructor <init>()V
+    .registers 2
+
+    invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+
+    new-instance v0, Ljava/util/HashMap;
+
+    invoke-direct {v0}, Ljava/util/HashMap;-><init>()V
+
+    iput-object v0, p0, LAf/c;->a:Ljava/util/Map;
+
+    return-void
+.end method
+
+
+# virtual methods
+.method public a(Ljava/lang/Class;I)LAf/c;
+    .registers 4
+    .annotation system Ldalvik/annotation/Signature;
+        value = {
+            "(",
+            "Ljava/lang/Class<",
+            "+",
+            "Ljava/lang/Throwable;",
+            ">;I)",
+            "LAf/c;"
+        }
+    .end annotation
+
+    iget-object v0, p0, LAf/c;->a:Ljava/util/Map;
+
+    invoke-static {p2}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
+
+    move-result-object p2
+
+    invoke-interface {v0, p1, p2}, Ljava/util/Map;->put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+
+    return-object p0
+.end method
+
+.method public b(Ljava/lang/Throwable;)Ljava/lang/Integer;
+    .registers 6
+
+    const/16 v0, 0x14
+
+    move-object v1, p1
+
+    :cond_3
+    invoke-virtual {p0, v1}, LAf/c;->c(Ljava/lang/Throwable;)Ljava/lang/Integer;
+
+    move-result-object v2
+
+    if-eqz v2, :cond_a
+
+    return-object v2
+
+    :cond_a
+    invoke-virtual {v1}, Ljava/lang/Throwable;->getCause()Ljava/lang/Throwable;
+
+    move-result-object v1
+
+    add-int/lit8 v0, v0, -0x1
+
+    if-lez v0, :cond_16
+
+    if-eq v1, p1, :cond_16
+
+    if-nez v1, :cond_3
+
+    :cond_16
+    invoke-static {}, Lxf/g$a;->a()Lxf/g;
+
+    move-result-object v0
+
+    sget-object v1, Ljava/util/logging/Level;->FINE:Ljava/util/logging/Level;
+
+    new-instance v2, Ljava/lang/StringBuilder;
+
+    const-string v3, "No specific message resource ID found for "
+
+    invoke-direct {v2, v3}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
+
+    invoke-virtual {v2, p1}, Ljava/lang/StringBuilder;->append(Ljava/lang/Object;)Ljava/lang/StringBuilder;
+
+    invoke-virtual {v2}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+
+    move-result-object p1
+
+    invoke-interface {v0, v1, p1}, Lxf/g;->a(Ljava/util/logging/Level;Ljava/lang/String;)V
+
+    const/4 p1, 0x0
+
+    return-object p1
+.end method
+
+.method public c(Ljava/lang/Throwable;)Ljava/lang/Integer;
+    .registers 8
+
+    invoke-virtual {p1}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
+
+    move-result-object p1
+
+    iget-object v0, p0, LAf/c;->a:Ljava/util/Map;
+
+    invoke-interface {v0, p1}, Ljava/util/Map;->get(Ljava/lang/Object;)Ljava/lang/Object;
+
+    move-result-object v0
+
+    check-cast v0, Ljava/lang/Integer;
+
+    if-nez v0, :cond_41
+
+    iget-object v1, p0, LAf/c;->a:Ljava/util/Map;
+
+    invoke-interface {v1}, Ljava/util/Map;->entrySet()Ljava/util/Set;
+
+    move-result-object v1
+
+    invoke-interface {v1}, Ljava/util/Set;->iterator()Ljava/util/Iterator;
+
+    move-result-object v1
+
+    const/4 v2, 0x0
+
+    :cond_19
+    :goto_19
+    invoke-interface {v1}, Ljava/util/Iterator;->hasNext()Z
+
+    move-result v3
+
+    if-eqz v3, :cond_41
+
+    invoke-interface {v1}, Ljava/util/Iterator;->next()Ljava/lang/Object;
+
+    move-result-object v3
+
+    check-cast v3, Ljava/util/Map$Entry;
+
+    invoke-interface {v3}, Ljava/util/Map$Entry;->getKey()Ljava/lang/Object;
+
+    move-result-object v4
+
+    check-cast v4, Ljava/lang/Class;
+
+    invoke-virtual {v4, p1}, Ljava/lang/Class;->isAssignableFrom(Ljava/lang/Class;)Z
+
+    move-result v5
+
+    if-eqz v5, :cond_19
+
+    if-eqz v2, :cond_39
+
+    invoke-virtual {v2, v4}, Ljava/lang/Class;->isAssignableFrom(Ljava/lang/Class;)Z
+
+    move-result v5
+
+    if-eqz v5, :cond_19
+
+    :cond_39
+    invoke-interface {v3}, Ljava/util/Map$Entry;->getValue()Ljava/lang/Object;
+
+    move-result-object v0
+
+    check-cast v0, Ljava/lang/Integer;
+
+    move-object v2, v4
+
+    goto :goto_19
+
+    :cond_41
+    return-object v0
+.end method

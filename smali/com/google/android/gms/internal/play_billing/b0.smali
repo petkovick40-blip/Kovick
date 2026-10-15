@@ -1,0 +1,31 @@
+###### Class com.google.android.gms.internal.play_billing.C2179b0 (com.google.android.gms.internal.play_billing.b0)
+.class public final Lcom/google/android/gms/internal/play_billing/b0;
+.super Ljava/lang/Object;
+.source "SourceFile"
+
+
+# direct methods
+.method public static a(Ljava/lang/Iterable;Ljava/lang/Object;)Ljava/lang/Object;
+    .registers 2
+
+    invoke-interface {p0}, Ljava/lang/Iterable;->iterator()Ljava/util/Iterator;
+
+    move-result-object p0
+
+    invoke-interface {p0}, Ljava/util/Iterator;->hasNext()Z
+
+    move-result p1
+
+    if-eqz p1, :cond_f
+
+    invoke-interface {p0}, Ljava/util/Iterator;->next()Ljava/lang/Object;
+
+    move-result-object p0
+
+    return-object p0
+
+    :cond_f
+    const/4 p0, 0x0
+
+    return-object p0
+.end method
