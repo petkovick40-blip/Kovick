@@ -49,16 +49,22 @@ jobs:
 
           python3 <<'PY'
           from pathlib import Path
+          import re
+
           res=Path('build-src/res')
           for p in res.rglob('*.9.png'):
               n=p.with_name(p.name[:-6]+'.png')
               if n.exists(): p.unlink()
               else: p.rename(n)
+
           root=Path('build-src/smali')
           for p in root.rglob('*.smali'):
-              t=p.read_text(encoding='utf-8',errors='replace'); lines=t.splitlines(True)
+              t=p.read_text(encoding='utf-8',errors='replace')
+              lines=t.splitlines(True)
               idx=[i for i,x in enumerate(lines) if x.startswith('.class ')]
-              if len(idx)>1: p.write_text(''.join(lines[:idx[1]]).rstrip()+'\n',encoding='utf-8')
+              if len(idx)>1:
+                  p.write_text(''.join(lines[:idx[1]]).rstrip()+'\n',encoding='utf-8')
+
           values=Path('build-src/res/values')
           styles=values/'styles.xml'
           if styles.exists():
@@ -72,11 +78,32 @@ jobs:
                 '<item name="android:layout_height">-2</item>':'<item name="android:layout_height">wrap_content</item>',
                 '<item name="android:windowSoftInputMode">0x10</item>':'<item name="android:windowSoftInputMode">adjustResize</item>',
                 '<item name="android:windowSoftInputMode">0x20</item>':'<item name="android:windowSoftInputMode">adjustPan</item>',
-                '<item name="android:windowSoftInputMode">0x11</item>':'<item name="android:windowSoftInputMode">stateUnspecified|adjustResize</item>'}
-              for a,b in repl.items(): s=s.replace(a,b)
+                '<item name="android:windowSoftInputMode">0x11</item>':'<item name="android:windowSoftInputMode">stateUnspecified|adjustResize</item>',
+                '<item name="android:breakStrategy">0</item>':'<item name="android:breakStrategy">simple</item>',
+                '<item name="android:breakStrategy">1</item>':'<item name="android:breakStrategy">high_quality</item>',
+                '<item name="android:breakStrategy">2</item>':'<item name="android:breakStrategy">balanced</item>',
+                '<item name="android:hyphenationFrequency">0</item>':'<item name="android:hyphenationFrequency">none</item>',
+                '<item name="android:hyphenationFrequency">1</item>':'<item name="android:hyphenationFrequency">normal</item>',
+                '<item name="android:hyphenationFrequency">2</item>':'<item name="android:hyphenationFrequency">full</item>',
+                '<item name="android:textAlignment">1</item>':'<item name="android:textAlignment">gravity</item>',
+                '<item name="android:textAlignment">4</item>':'<item name="android:textAlignment">center</item>',
+                '<item name="android:textAlignment">5</item>':'<item name="android:textAlignment">viewStart</item>',
+                '<item name="android:orientation">0</item>':'<item name="android:orientation">horizontal</item>',
+                '<item name="android:orientation">1</item>':'<item name="android:orientation">vertical</item>',
+                '<item name="android:datePickerMode">1</item>':'<item name="android:datePickerMode">spinner</item>',
+                '<item name="android:datePickerMode">2</item>':'<item name="android:datePickerMode">calendar</item>',
+                '<item name="android:layout_gravity">0x11</item>':'<item name="android:layout_gravity">center</item>',
+                '<item name="android:layout_gravity">0x800013</item>':'<item name="android:layout_gravity">start|center_vertical</item>'
+              }
+              for a,b in repl.items():
+                  s=s.replace(a,b)
+              s=re.sub(r'<item name="android:windowSoftInputMode">0x([0-9a-fA-F]+)</item>', '<item name="android:windowSoftInputMode">adjustResize</item>', s)
               styles.write_text(s,encoding='utf-8')
-          for p in values.glob('*.xml'):
-              s=p.read_text(encoding='utf-8',errors='replace').replace('@attr/??','@null')
+
+          for p in res.rglob('*.xml'):
+              s=p.read_text(encoding='utf-8',errors='replace')
+              s=s.replace('@attr/??','@null').replace('?attr/??','@null')
+              s=s.replace('>???<','>Unknown<')
               p.write_text(s,encoding='utf-8')
           PY
 
