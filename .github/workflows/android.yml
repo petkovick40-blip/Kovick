@@ -135,6 +135,7 @@ jobs:
           PY
           python3 <<'PY'
           from pathlib import Path
+          import re
           import xml.etree.ElementTree as ET
           res=Path('build-src/res')
           for p in res.rglob('*.9.png'):
@@ -161,13 +162,22 @@ jobs:
               'windowFlags': {'0x2':'dimBehind'}
           }
           gravity = {'0x1':'center_horizontal','0x2':'left','0x3':'left','0x4':'right','0x5':'right','0x10':'center_vertical','0x11':'center','0x30':'top','0x50':'bottom','0x800003':'start','0x800005':'end','0x800013':'start|center_vertical','0x800033':'start|top','0x800053':'start|bottom','0x800055':'end|bottom'}
+          item_re = re.compile(r'(<item\\b[^>]*\\bname=["\']android:([^"\']+)["\'][^>]*>)(.*?)(</item>)', re.S)
           def fix_style_file(p):
               s=p.read_text(encoding='utf-8',errors='replace')
-              for attr,m in enum_maps.items():
-                  for raw,name in m.items(): s=s.replace(f'<item name="android:{attr}">{raw}</item>', f'<item name="android:{attr}">{name}</item>')
-              for attr in ('gravity','layout_gravity'):
-                  for raw,name in gravity.items(): s=s.replace(f'<item name="android:{attr}">{raw}</item>', f'<item name="android:{attr}">{name}</item>')
-              s=s.replace('<item name="android:layout_width">-1</item>','<item name="android:layout_width">match_parent</item>').replace('<item name="android:layout_width">-2</item>','<item name="android:layout_width">wrap_content</item>').replace('<item name="android:layout_height">-1</item>','<item name="android:layout_height">match_parent</item>').replace('<item name="android:layout_height">-2</item>','<item name="android:layout_height">wrap_content</item>')
+              def repl(m):
+                  attr=m.group(2)
+                  value=m.group(3).strip()
+                  if attr in enum_maps and value in enum_maps[attr]:
+                      return m.group(1)+enum_maps[attr][value]+m.group(5)
+                  if attr in ('gravity','layout_gravity') and value in gravity:
+                      return m.group(1)+gravity[value]+m.group(5)
+                  return m.group(0)
+              s=item_re.sub(repl,s)
+              s=re.sub(r'(<item\\b[^>]*\\bname=["\']android:layout_width["\'][^>]*>)\\s*-1\\s*(</item>)',r'\\1match_parent\\2',s)
+              s=re.sub(r'(<item\\b[^>]*\\bname=["\']android:layout_width["\'][^>]*>)\\s*-2\\s*(</item>)',r'\\1wrap_content\\2',s)
+              s=re.sub(r'(<item\\b[^>]*\\bname=["\']android:layout_height["\'][^>]*>)\\s*-1\\s*(</item>)',r'\\1match_parent\\2',s)
+              s=re.sub(r'(<item\\b[^>]*\\bname=["\']android:layout_height["\'][^>]*>)\\s*-2\\s*(</item>)',r'\\1wrap_content\\2',s)
               p.write_text(s,encoding='utf-8')
           for p in res.rglob('styles*.xml'): fix_style_file(p)
           for p in res.rglob('*.xml'):
@@ -207,6 +217,7 @@ jobs:
             packageName: com.zjx.ztezscreenshot
             sparseEntries: false
             compactEntries: false
+            keepRawValues: false
             keepRawValues: false
           sharedLibrary: false
           sparseResources: false
