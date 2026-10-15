@@ -106,6 +106,49 @@ jobs:
                           raise SystemExit(f'Invalid smali: {f}')
           PY
 
+          # The original APK was decompiled with numeric enum/flag values.
+          # Modern aapt2 requires the symbolic values in these Android attrs.
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('res/values')
+          enum_maps={
+              'scaleType': ['matrix','fitXY','fitStart','fitCenter','fitEnd','center','centerCrop','centerInside'],
+              'ellipsize': ['start','middle','end','marquee'],
+              'breakStrategy': ['simple','high_quality','balanced'],
+              'hyphenationFrequency': ['none','normal','full','normal'],
+              'importantForAccessibility': ['auto','yes','no','noHideDescendants'],
+          }
+          dim_attrs={'layout_width','layout_height'}
+          flag_maps={
+              'windowSoftInputMode': {
+                  '0x10':'adjustResize','0x20':'adjustPan','0x11':'adjustResize|stateUnspecified',
+                  '0x21':'adjustPan|stateUnspecified','0x12':'adjustResize|stateHidden',
+                  '0x22':'adjustPan|stateHidden','0x13':'adjustResize|stateAlwaysHidden',
+                  '0x23':'adjustPan|stateAlwaysHidden'
+              }
+          }
+          for p in root.glob('*.xml'):
+              s=p.read_text(errors='ignore')
+              def repl(m):
+                  name=m.group(1); val=m.group(2)
+                  bare=name.split(':')[-1]
+                  if bare in enum_maps and val.isdigit():
+                      n=int(val); vals=enum_maps[bare]
+                      if 0 <= n < len(vals): return f'<item name="{name}">{vals[n]}</item>'
+                  if bare in dim_attrs and val in ('-1','-2'):
+                      return f'<item name="{name}">{"match_parent" if val=="-1" else "wrap_content"}</item>'
+                  if bare in flag_maps and val.lower() in flag_maps[bare]:
+                      return f'<item name="{name}">{flag_maps[bare][val.lower()]}</item>'
+                  if bare in ('breakStrategy','hyphenationFrequency') and val.isdigit():
+                      return m.group(0)
+                  return m.group(0)
+              s=re.sub(r'<item name="([^"]+)">([^<]+)</item>', repl, s)
+              # A literal decompiled "???" is interpreted by aapt2 as a theme attr.
+              s=s.replace('>???<','>&#63;&#63;&#63;<')
+              p.write_text(s)
+          PY
+
           cat > apktool.yml <<'EOF'
           version: 2.9.3
           apkFileName: Kovick.apk
