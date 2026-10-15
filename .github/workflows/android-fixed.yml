@@ -73,55 +73,28 @@ jobs:
           tar --exclude=./build-src --exclude=./.git --exclude=./.github --exclude=./diagnostics -cf - . | tar -xf - -C build-src
           cd build-src
 
+          # The repository contains the original decompiled AndroidManifest.xml under resources.
+          # Use it as the source of truth so the real launcher Activity is preserved.
+          if [ -f resources/AndroidManifest.xml ]; then
+            cp resources/AndroidManifest.xml AndroidManifest.xml
+          elif [ -f AndroidManifest.xml ]; then
+            cp AndroidManifest.xml AndroidManifest.xml
+          else
+            echo 'No AndroidManifest.xml found' >&2
+            exit 1
+          fi
+
           python3 - <<'PY'
           from pathlib import Path
           import re
-          root = Path('.')
-          manifest = root / 'AndroidManifest.xml'
-          smali_dirs = [root / 'smali'] + sorted(root.glob('smali_classes*'))
-          package = 'com.kovick.generated'
-          app_class = None
-          app = root / 'smali/com/zjx/jyandroid/App.smali'
-          if app.exists():
-              app_class = 'com.zjx.jyandroid.App'
-              package = 'com.zjx.jyandroid'
-          else:
-              for d in smali_dirs:
-                  if not d.is_dir(): continue
-                  for f in d.rglob('App.smali'):
-                      rel = f.relative_to(d).with_suffix('')
-                      parts = list(rel.parts)
-                      if parts:
-                          app_class = '.'.join(parts)
-                          package = '.'.join(parts[:-1]) or package
-                          break
-                  if app_class: break
-          activity = None
-          patterns = [r'^\.super Landroid/app/Activity;', r'^\.super Landroidx/appcompat/app/AppCompatActivity;', r'^\.super Landroidx/fragment/app/FragmentActivity;', r'^\.super Landroid/app/ActivityGroup;']
-          for d in smali_dirs:
-              if activity or not d.is_dir(): continue
-              for f in d.rglob('*.smali'):
-                  text = f.read_text(errors='ignore')
-                  if any(re.search(p, text, re.M) for p in patterns):
-                      activity = '.'.join(f.relative_to(d).with_suffix('').parts)
-                      break
-          if activity is None:
-              activity = app_class or package + '.MainActivity'
-          application_attr = f' android:name=".{app_class.split(".")[-1]}"' if app_class and app_class.startswith(package + '.') else ''
-          manifest_text = f'''<?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="{package}" android:versionCode="1" android:versionName="1.0">
-              <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="36" />
-              <application android:theme="@android:style/Theme.Material.Light.NoActionBar" android:label="Kovick" android:allowBackup="false" android:supportsRtl="true"{application_attr}>
-                  <activity android:name="{activity}" android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>'''
-          manifest.write_text(manifest_text)
-          print(f'Generated manifest: package={package}, activity={activity}, application={app_class}')
+          p=Path('AndroidManifest.xml')
+          s=p.read_text(errors='ignore')
+          # Ensure the original launcher remains exported on modern Android.
+          s=re.sub(r'(android:name="com\.zjx\.jyandroid\.MainApp\.MainActivity"[^>]*?)\s+android:exported="[^"]*"', r'\1 android:exported="true"', s)
+          if 'com.zjx.jyandroid.MainApp.MainActivity' not in s:
+              raise SystemExit('Original launcher MainActivity was not found in manifest')
+          p.write_text(s)
+          print('Using original manifest with com.zjx.jyandroid.MainApp.MainActivity')
           PY
 
           python3 - <<'PY'
@@ -137,7 +110,6 @@ jobs:
               p.write_text('\n'.join(out)+'\n')
           else:
               p.write_text('''version: 3\napkFileName: Kovick.apk\nisFrameworkApk: false\nusesFramework:\n  ids:\n    - 1\n  tag: null\nsdkInfo:\n  minSdkVersion: 23\n  targetSdkVersion: 36\npackageInfo:\n  forcedPackageId: 127\n  renameManifestPackage: null\nunknownFiles: {}\ndoNotCompress: []\n''')
-              print('Generated minimal apktool.yml')
           PY
 
           python3 - <<'PY'
@@ -146,29 +118,21 @@ jobs:
           roots = [Path('smali')] + sorted(Path('.').glob('smali_classes*'))
           total = 0
           for root in roots:
-              if not root.is_dir():
-                  continue
+              if not root.is_dir(): continue
               for src in list(root.rglob('*.smali')):
-                  text = src.read_text(errors='ignore')
-                  matches = list(re.finditer(r'(?m)^\.class\b[^\n]*$', text))
-                  if len(matches) <= 1:
-                      continue
-                  chunks = []
-                  for i, m in enumerate(matches):
-                      end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
-                      chunk = text[m.start():end]
-                      cm = re.match(r'(?m)^\.class\s+(?:[^\n]*\s)?L([^;]+);', chunk)
-                      if not cm:
-                          raise SystemExit(f'Cannot determine class descriptor in {src}')
-                      rel = Path(cm.group(1) + '.smali')
-                      dst = root / rel
-                      dst.parent.mkdir(parents=True, exist_ok=True)
-                      if dst.exists() and dst.resolve() != src.resolve():
-                          raise SystemExit(f'Duplicate smali class target: {dst}')
-                      chunks.append((dst, chunk))
-                  for dst, chunk in chunks:
-                      dst.write_text(chunk)
-                      total += 1
+                  text=src.read_text(errors='ignore')
+                  matches=list(re.finditer(r'(?m)^\.class\b[^\n]*$',text))
+                  if len(matches)<=1: continue
+                  chunks=[]
+                  for i,m in enumerate(matches):
+                      end=matches[i+1].start() if i+1<len(matches) else len(text)
+                      chunk=text[m.start():end]
+                      cm=re.match(r'(?m)^\.class\s+(?:[^\n]*\s)?L([^;]+);',chunk)
+                      if not cm: raise SystemExit(f'Cannot determine class descriptor in {src}')
+                      dst=root/(cm.group(1)+'.smali'); dst.parent.mkdir(parents=True,exist_ok=True)
+                      if dst.exists() and dst.resolve()!=src.resolve(): raise SystemExit(f'Duplicate smali class target: {dst}')
+                      chunks.append((dst,chunk))
+                  for dst,chunk in chunks: dst.write_text(chunk); total+=1
                   src.unlink()
           print(f'Split multi-class smali files: {total} class files created')
           PY
@@ -176,18 +140,17 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re
-          roots = [Path('smali')] + sorted(Path('.').glob('smali_classes*'))
+          roots=[Path('smali')]+sorted(Path('.').glob('smali_classes*'))
           bad=[]
           for root in roots:
               if not root.is_dir(): continue
               for f in root.rglob('*.smali'):
-                  n=len(re.findall(r'(?m)^\.class\b', f.read_text(errors='ignore')))
-                  if n != 1:
-                      bad.append((str(f),n))
+                  n=len(re.findall(r'(?m)^\.class\b',f.read_text(errors='ignore')))
+                  if n!=1: bad.append((str(f),n))
           if bad:
               for f,n in bad[:20]: print(f'Invalid class count {n}: {f}')
               raise SystemExit(f'Found {len(bad)} invalid smali files')
-          print('Smali validation: every file contains exactly one .class directive')
+          print('Smali validation OK')
           PY
 
           if [ -d smali ]; then
@@ -204,16 +167,12 @@ jobs:
               if dex>1:
                   d=Path(f'smali_classes{dex}')/f.relative_to('smali'); d.parent.mkdir(parents=True,exist_ok=True); f.rename(d)
               count+=n
-          print('Dex partitions:', dex)
+          print('Dex partitions:',dex)
           PY
           fi
 
           test -f AndroidManifest.xml
-          test -f apktool.yml
-          echo '--- AndroidManifest.xml ---'
-          cat AndroidManifest.xml
-          echo '--- apktool.yml ---'
-          cat apktool.yml
+          grep -q 'com.zjx.jyandroid.MainApp.MainActivity' AndroidManifest.xml
 
       - name: Build APK
         shell: bash
@@ -233,5 +192,3 @@ jobs:
           name: Kovick-APK
           path: Kovick.apk
           if-no-files-found: error
-
-# Build trigger: fix apksigner password specification.
