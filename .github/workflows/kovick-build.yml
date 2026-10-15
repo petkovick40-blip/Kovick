@@ -79,7 +79,9 @@ jobs:
           version: 2.9.3
           apkFileName: Kovick.apk
           isFrameworkApk: false
-          usesFramework: []
+          usesFramework:
+            ids:
+              - 1
           sdkInfo:
             minSdkVersion: '27'
             targetSdkVersion: '35'
