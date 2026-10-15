@@ -1,6 +1,7 @@
 package com.kovick;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.content.Intent;
@@ -25,8 +26,22 @@ public class MainActivity extends Activity {
         root.addView(button("📱 Permitir sobreposição",v->startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:"+getPackageName())))));
         root.addView(button("⚡ Autorizar Shizuku / ADB",v->authorizeShizuku()));
         root.addView(button("🎯 Editor de controles",v->KovickAccessibilityService.openEditor(this)));
-        root.addView(button("💾 Perfil atual",v->Toast.makeText(this,"Perfil padrão salvo automaticamente",Toast.LENGTH_SHORT).show()));
+        root.addView(button("💾 Escolher perfil",v->chooseProfile()));
         setContentView(root); refresh();
+    }
+    void chooseProfile(){
+        String[] profiles={"Padrão","Free Fire","Roblox","Outros jogos"};
+        android.content.SharedPreferences p=getSharedPreferences("profiles",0);
+        String current=p.getString("current_profile","Padrão");
+        int selected=0;
+        for(int i=0;i<profiles.length;i++) if(profiles[i].equals(current)) selected=i;
+        new AlertDialog.Builder(this).setTitle("Perfil do jogo")
+                .setSingleChoiceItems(profiles,selected,(dialog,which)->{
+                    p.edit().putString("current_profile",profiles[which]).apply();
+                    dialog.dismiss();
+                    refresh();
+                    Toast.makeText(this,"Perfil selecionado: "+profiles[which]+". Reabra o mapeador para aplicar.",Toast.LENGTH_LONG).show();
+                }).setNegativeButton("Cancelar",null).show();
     }
     void authorizeShizuku(){
         try {
@@ -35,6 +50,10 @@ public class MainActivity extends Activity {
             Shizuku.requestPermission(42);
         } catch(Throwable t){ Toast.makeText(this,"Shizuku não está disponível.",Toast.LENGTH_LONG).show(); }
     }
-    void refresh(){ if(status==null)return; status.setText("STATUS\nSobreposição: "+(Settings.canDrawOverlays(this)?"OK":"PENDENTE")+"\nAcessibilidade: "+(KovickAccessibilityService.enabled?"OK":"PENDENTE")+"\nShizuku/ADB: "+(KovickAccessibilityService.shizukuOk()?"OK":"PENDENTE")); }
+    void refresh(){
+        if(status==null)return;
+        String profile=getSharedPreferences("profiles",0).getString("current_profile","Padrão");
+        status.setText("STATUS\nPerfil: "+profile+"\nSobreposição: "+(Settings.canDrawOverlays(this)?"OK":"PENDENTE")+"\nAcessibilidade: "+(KovickAccessibilityService.enabled?"OK":"PENDENTE")+"\nShizuku/ADB: "+(KovickAccessibilityService.shizukuOk()?"OK":"PENDENTE"));
+    }
     @Override protected void onResume(){super.onResume(); refresh();}
 }
