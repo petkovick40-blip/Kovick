@@ -20,49 +20,36 @@ jobs:
       - name: Restore and harden reconstructed Application
         run: |
           set -euo pipefail
-          # The previous diagnostic commit accidentally replaced the full
-          # reconstructed App.smali with a shortened version. Restore the
-          # complete class from the last known-good source commit before build.
           git checkout f08b662c8d33444f7296787f8ec6835472d67ef2 -- smali/com/zjx/jyandroid/App.smali
-
           python3 <<'PY'
           from pathlib import Path
-          import re
-
           p = Path('smali/com/zjx/jyandroid/App.smali')
           s = p.read_text(encoding='utf-8')
           start = s.index('.method public onCreate()V')
           end = s.index('.end method', start) + len('.end method')
-
           replacement = '''.method public onCreate()V
               .registers 5
 
               sput-object p0, Lcom/zjx/jyandroid/App;->r6:Lcom/zjx/jyandroid/App;
-
               invoke-virtual {p0}, Landroid/content/Context;->getApplicationContext()Landroid/content/Context;
               move-result-object v0
               sput-object v0, Lcom/zjx/jyandroid/App;->s6:Landroid/content/Context;
-
               invoke-super {p0}, Landroid/app/Application;->onCreate()V
-
               :try_start_0
               invoke-static {v0}, LS8/d;->f(Landroid/content/Context;)V
               :try_end_5
               .catch Ljava/lang/Throwable; {:try_start_0 .. :try_end_5} :catch_5
               :catch_5
-
               :try_start_6
               invoke-virtual {p0}, Lcom/zjx/jyandroid/App;->E()V
               :try_end_b
               .catch Ljava/lang/Throwable; {:try_start_6 .. :try_end_b} :catch_b
               :catch_b
-
               :try_start_c
               invoke-virtual {p0, p0}, Landroid/app/Application;->registerActivityLifecycleCallbacks(Landroid/app/Application$ActivityLifecycleCallbacks;)V
               :try_end_11
               .catch Ljava/lang/Throwable; {:try_start_c .. :try_end_11} :catch_11
               :catch_11
-
               :try_start_12
               invoke-static {}, Landroidx/lifecycle/f0;->l()Landroidx/lifecycle/M;
               move-result-object v0
@@ -72,7 +59,6 @@ jobs:
               :try_end_1f
               .catch Ljava/lang/Throwable; {:try_start_12 .. :try_end_1f} :catch_1f
               :catch_1f
-
               :try_start_20
               invoke-static {}, Lxf/c;->f()Lxf/c;
               move-result-object v0
@@ -80,13 +66,10 @@ jobs:
               :try_end_2a
               .catch Ljava/lang/Throwable; {:try_start_20 .. :try_end_2a} :catch_2a
               :catch_2a
-
               return-void
           .end method'''
-
           s = s[:start] + replacement + s[end:]
           p.write_text(s, encoding='utf-8')
-          print('Hardened App.onCreate while preserving the complete reconstructed class')
           PY
       - name: Set up Java
         uses: actions/setup-java@v5
@@ -119,7 +102,6 @@ jobs:
           if [ -d resources/assets ]; then cp -a resources/assets build-src/assets; fi
           if [ -d resources/lib ]; then cp -a resources/lib build-src/lib; fi
           cp -a smali build-src/smali
-
           python3 <<'PY'
           from pathlib import Path
           import shutil
@@ -148,11 +130,9 @@ jobs:
                   shutil.move(str(src), str(dst))
               methods += n
           for d in sorted(root.rglob('*'), reverse=True):
-              if d.is_dir() and not any(d.iterdir()):
-                  d.rmdir()
+              if d.is_dir() and not any(d.iterdir()): d.rmdir()
           print(f'Split {len(files)} smali classes across {dex} dex source directories')
           PY
-
           python3 <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
@@ -165,8 +145,7 @@ jobs:
               for p in root.rglob('*.smali'):
                   lines=p.read_text(encoding='utf-8',errors='replace').splitlines(True)
                   idx=[i for i,x in enumerate(lines) if x.startswith('.class ')]
-                  if len(idx)>1:
-                      p.write_text(''.join(lines[:idx[1]]).rstrip()+'\n',encoding='utf-8')
+                  if len(idx)>1: p.write_text(''.join(lines[:idx[1]]).rstrip()+'\n',encoding='utf-8')
           enum_maps = {
               'scaleType': {'0':'matrix','1':'fitXY','2':'fitStart','3':'fitCenter','4':'fitEnd','5':'center','6':'centerCrop','7':'centerInside'},
               'ellipsize': {'0':'none','1':'start','2':'middle','3':'end','4':'marquee'},
@@ -178,21 +157,17 @@ jobs:
               'breakStrategy': {'0':'simple','1':'high_quality','2':'balanced'},
               'hyphenationFrequency': {'0':'none','1':'normal','2':'full','3':'fast','4':'normal'},
               'inputType': {'1':'text','2':'number','3':'phone','4':'datetime','7':'numberDecimal'},
-              'windowSoftInputMode': {'0x10':'adjustResize','0x20':'adjustPan','0x11':'stateUnspecified|adjustResize'}
+              'windowSoftInputMode': {'0x10':'adjustResize','0x20':'adjustPan','0x11':'stateUnspecified|adjustResize'},
+              'windowFlags': {'0x2':'dimBehind'}
           }
           gravity = {'0x1':'center_horizontal','0x2':'left','0x3':'left','0x4':'right','0x5':'right','0x10':'center_vertical','0x11':'center','0x30':'top','0x50':'bottom','0x800003':'start','0x800005':'end','0x800013':'start|center_vertical','0x800033':'start|top','0x800053':'start|bottom','0x800055':'end|bottom'}
           def fix_style_file(p):
               s=p.read_text(encoding='utf-8',errors='replace')
               for attr,m in enum_maps.items():
-                  for raw,name in m.items():
-                      s=s.replace(f'<item name="android:{attr}">{raw}</item>', f'<item name="android:{attr}">{name}</item>')
+                  for raw,name in m.items(): s=s.replace(f'<item name="android:{attr}">{raw}</item>', f'<item name="android:{attr}">{name}</item>')
               for attr in ('gravity','layout_gravity'):
-                  for raw,name in gravity.items():
-                      s=s.replace(f'<item name="android:{attr}">{raw}</item>', f'<item name="android:{attr}">{name}</item>')
-              s=s.replace('<item name="android:layout_width">-1</item>','<item name="android:layout_width">match_parent</item>')
-              s=s.replace('<item name="android:layout_width">-2</item>','<item name="android:layout_width">wrap_content</item>')
-              s=s.replace('<item name="android:layout_height">-1</item>','<item name="android:layout_height">match_parent</item>')
-              s=s.replace('<item name="android:layout_height">-2</item>','<item name="android:layout_height">wrap_content</item>')
+                  for raw,name in gravity.items(): s=s.replace(f'<item name="android:{attr}">{raw}</item>', f'<item name="android:{attr}">{name}</item>')
+              s=s.replace('<item name="android:layout_width">-1</item>','<item name="android:layout_width">match_parent</item>').replace('<item name="android:layout_width">-2</item>','<item name="android:layout_width">wrap_content</item>').replace('<item name="android:layout_height">-1</item>','<item name="android:layout_height">match_parent</item>').replace('<item name="android:layout_height">-2</item>','<item name="android:layout_height">wrap_content</item>')
               p.write_text(s,encoding='utf-8')
           for p in res.rglob('styles*.xml'): fix_style_file(p)
           for p in res.rglob('*.xml'):
@@ -200,7 +175,6 @@ jobs:
               p.write_text(s,encoding='utf-8')
           for p in res.rglob('*.xml'): ET.parse(p)
           PY
-
           python3 <<'PY'
           from pathlib import Path
           bad=[]
@@ -211,7 +185,6 @@ jobs:
           if bad:
               print(*bad[:20],sep='\n'); raise SystemExit(1)
           PY
-
           cat > build-src/apktool.yml <<'YAML'
           version: 3.0.3
           apkFileName: Kovick.apk
