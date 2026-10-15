@@ -1,0 +1,187 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Restore and harden reconstructed Application
+        shell: bash
+        run: |
+          if git cat-file -e f08b662c8d33444f7296787f8ec6835472d67ef2:smali/com/zjx/jyandroid/App.smali 2>/dev/null; then
+            git show f08b662c8d33444f7296787f8ec6835472d67ef2:smali/com/zjx/jyandroid/App.smali > smali/com/zjx/jyandroid/App.smali
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('smali/com/zjx/jyandroid/App.smali')
+          if p.exists():
+              s=p.read_text(errors='ignore')
+              start=s.find('.method public onCreate()V')
+              if start>=0:
+                  end=s.find('.end method', start)
+                  if end>=0:
+                      end += len('.end method')
+                      method=''' .method public onCreate()V\n    .locals 0\n    invoke-super {p0}, Landroid/app/Application;->onCreate()V\n    return-void\n.end method'''.strip()
+                      s=s[:start]+method+s[end:]
+                      p.write_text(s)
+          PY
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        shell: bash
+        run: |
+          export ANDROID_SDK_ROOT="$HOME/android-sdk"
+          export ANDROID_HOME="$ANDROID_SDK_ROOT"
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+          curl -fsSL -o /tmp/cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
+          rm -rf "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+          unzip -q /tmp/cmdline-tools.zip -d /tmp/android-cmdline
+          cp -a /tmp/android-cmdline/cmdline-tools/. "$ANDROID_SDK_ROOT/cmdline-tools/latest/"
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+          echo "$ANDROID_SDK_ROOT/build-tools/36.0.0" >> "$GITHUB_PATH"
+
+      - name: Install Apktool
+        shell: bash
+        run: |
+          curl -L -o /tmp/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar
+
+      - name: Prepare reconstructed Apktool project
+        shell: bash
+        run: |
+          rm -rf build-src
+          cp -a . build-src
+          cd build-src
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('apktool.yml')
+          if p.exists():
+              s=p.read_text()
+              s=s.replace('  keepRawValues: false\n  keepRawValues: false\n','  keepRawValues: false\n')
+              p.write_text(s)
+          PY
+          rm -rf .git .github diagnostics
+          if [ -d smali ]; then
+            python3 - <<'PY'
+          from pathlib import Path
+          limit=30000; count=0; dex=1; files=[]
+          for f in Path('smali').rglob('*.smali'):
+              methods=sum(1 for line in f.read_text(errors='ignore').splitlines() if line.lstrip().startswith('.method'))
+              files.append((f,methods))
+          for f,methods in files:
+              if count+methods > limit and count:
+                  dex += 1; Path(f'smali_classes{dex}').mkdir(parents=True,exist_ok=True); count=0
+              if dex>1:
+                  rel=f.relative_to('smali'); dest=Path(f'smali_classes{dex}')/rel
+                  dest.parent.mkdir(parents=True,exist_ok=True); f.rename(dest)
+              count += methods
+          PY
+          fi
+          find res -type f -name '*.9.png' -print0 2>/dev/null | while IFS= read -r -d '' f; do
+            python3 - "$f" <<'PY'
+          import sys
+          from PIL import Image
+          try:
+              p=sys.argv[1]; im=Image.open(p).convert('RGBA'); w,h=im.size
+              if w<3 or h<3: raise SystemExit
+              pix=im.load()
+              for x in range(w): pix[x,0]=(0,0,0,0); pix[x,h-1]=(0,0,0,0)
+              for y in range(h): pix[0,y]=(0,0,0,0); pix[w-1,y]=(0,0,0,0)
+              im.save(p)
+          except Exception: pass
+          PY
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          enum_maps={
+            'scaleType':{'0':'matrix','1':'fitXY','2':'fitStart','3':'fitCenter','4':'fitEnd','5':'center','6':'centerCrop','7':'centerInside'},
+            'ellipsize':{'0':'none','1':'start','2':'middle','3':'end','4':'marquee'},
+            'orientation':{'0':'horizontal','1':'vertical'},
+            'layoutDirection':{'0':'ltr','1':'rtl','2':'inherit','3':'locale'},
+            'textAlignment':{'0':'inherit','1':'gravity','2':'textStart','3':'textEnd','4':'center','5':'viewStart','6':'viewEnd'},
+            'datePickerMode':{'1':'spinner','2':'calendar'}, 'visibility':{'0':'visible','1':'invisible','2':'gone'},
+            'breakStrategy':{'0':'simple','1':'high_quality','2':'balanced'},
+            'hyphenationFrequency':{'0':'none','1':'normal','2':'full','3':'fast','4':'full'},
+            'inputType':{'1':'text','2':'number','3':'phone','4':'datetime','7':'numberDecimal'},
+            'windowSoftInputMode':{'0x10':'adjustResize','0x20':'adjustPan','0x11':'stateUnspecified|adjustResize'},
+            'windowFlags':{'0x2':'dimBehind','0x10':'noTitle','0x20':'fullscreen','0x11':'noTitle|fullscreen'},
+          }
+          defaults={'windowFlags':'dimBehind','visibility':'visible','orientation':'horizontal','ellipsize':'none','layoutDirection':'inherit','textAlignment':'inherit','breakStrategy':'simple','hyphenationFrequency':'normal','scaleType':'fitCenter','datePickerMode':'calendar'}
+          pat=re.compile(r'(<item\b[^>]*\bname=["\'](?:android:)?([^"\']+)["\'][^>]*>)(.*?)(</item>)',re.S|re.I)
+          flag_re=re.compile(r'^(0x[0-9a-fA-F]+|\d+)$')
+          for p in Path('res').rglob('*.xml'):
+              try:s=p.read_text()
+              except:continue
+              old=s
+              def repl(m):
+                  head,name,val,tail=m.groups(); v=val.strip()
+                  if name in ('layout_width','layout_height') and v in ('-1','-2'): v={'-1':'match_parent','-2':'wrap_content'}[v]
+                  elif name in enum_maps and v in enum_maps[name]: v=enum_maps[name][v]
+                  elif name in enum_maps and flag_re.fullmatch(v): v=defaults.get(name,v)
+                  return head+v+tail
+              s=pat.sub(repl,s).replace('>???<','>Unknown<')
+              if s!=old:p.write_text(s)
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('apktool.yml')
+          if p.exists():
+              lines=p.read_text().splitlines(); out=[]; seen=False
+              for line in lines:
+                  if line.strip()=='keepRawValues: false':
+                      if seen: continue
+                      seen=True
+                  out.append(line)
+              p.write_text('\n'.join(out)+'\n')
+          PY
+
+      - name: Validate smali and XML
+        shell: bash
+        run: |
+          cd build-src
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          for p in Path('res').rglob('*.xml'):
+              try: ET.parse(p)
+              except Exception as e: raise SystemExit(f'Invalid XML {p}: {e}')
+          PY
+
+      - name: Build unsigned APK
+        shell: bash
+        run: |
+          cd build-src
+          java -jar /tmp/apktool.jar b . -o ../Kovick-unsigned.apk --use-aapt2
+
+      - name: Align and sign APK
+        shell: bash
+        run: |
+          zipalign -f 4 Kovick-unsigned.apk Kovick-aligned.apk
+          keytool -genkeypair -v -keystore /tmp/kovick.keystore -alias kovick -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Kovick,OU=Kovick,O=Kovick,L=BR,ST=BA,C=BR" >/dev/null 2>&1
+          apksigner sign --ks /tmp/kovick.keystore --ks-pass pass:android --key-pass pass:android --out Kovick.apk Kovick-aligned.apk
+          apksigner verify --verbose Kovick.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kovick-APK
+          path: Kovick.apk
+          if-no-files-found: error
