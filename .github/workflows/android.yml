@@ -50,6 +50,7 @@ jobs:
           python3 <<'PY'
           from pathlib import Path
           import re
+          import xml.etree.ElementTree as ET
 
           res=Path('build-src/res')
           for p in res.rglob('*.9.png'):
@@ -64,8 +65,6 @@ jobs:
               if len(idx)>1:
                   p.write_text(''.join(lines[:idx[1]]).rstrip()+'\n',encoding='utf-8')
 
-          # Apktool's reconstructed resources sometimes contain raw numeric enum/flag
-          # values. Convert the known Android framework values back to aapt2 syntax.
           enum_maps = {
               'scaleType': {'3':'fitCenter','5':'center','6':'centerCrop','7':'centerInside','4':'fitEnd','2':'fitStart','1':'fitXY','0':'matrix'},
               'ellipsize': {'0':'none','1':'start','2':'middle','3':'end','4':'marquee'},
@@ -79,7 +78,6 @@ jobs:
               'inputType': {'1':'text','2':'number','3':'phone','4':'datetime','7':'numberDecimal'},
               'windowSoftInputMode': {'0x10':'adjustResize','0x20':'adjustPan','0x11':'stateUnspecified|adjustResize'}
           }
-
           gravity = {
               '0x1':'center_horizontal', '0x2':'left', '0x3':'left', '0x4':'right', '0x5':'right',
               '0x10':'center_vertical', '0x11':'center', '0x30':'top', '0x50':'bottom',
@@ -90,24 +88,15 @@ jobs:
           def fix_style_file(p):
               s=p.read_text(encoding='utf-8',errors='replace')
               for attr,m in enum_maps.items():
-                  pat=rf'(<item name="android:{re.escape(attr)}">)([^<]+)(</item>)'
-                  s=re.sub(pat, lambda m: m.group(1)+m.group(2) if m.group(2).startswith('@') or m.group(2).startswith('?') else m.group(1)+m.group(2), s)
                   for raw,name in m.items():
                       s=s.replace(f'<item name="android:{attr}">{raw}</item>', f'<item name="android:{attr}">{name}</item>')
               for attr in ('gravity','layout_gravity'):
                   for raw,name in gravity.items():
                       s=s.replace(f'<item name="android:{attr}">{raw}</item>', f'<item name="android:{attr}">{name}</item>')
-              # Resource dimensions/layout sentinels from reconstructed values.
               s=s.replace('<item name="android:layout_width">-1</item>','<item name="android:layout_width">match_parent</item>')
               s=s.replace('<item name="android:layout_width">-2</item>','<item name="android:layout_width">wrap_content</item>')
               s=s.replace('<item name="android:layout_height">-1</item>','<item name="android:layout_height">match_parent</item>')
               s=s.replace('<item name="android:layout_height">-2</item>','<item name="android:layout_height">wrap_content</item>')
-              # Remaining common gravity hex values: preserve semantics where possible.
-              s=re.sub(r'<item name="android:(gravity|layout_gravity)">0x800005</item>', r'<item name="android:\1">end</item>', s)
-              s=re.sub(r'<item name="android:(gravity|layout_gravity)">0x800003</item>', r'<item name="android:\1">start</item>', s)
-              s=re.sub(r'<item name="android:(gravity|layout_gravity)">0x800013</item>', r'<item name="android:\1">start|center_vertical</item>', s)
-              s=re.sub(r'<item name="android:(gravity|layout_gravity)">0x800033</item>', r'<item name="android:\1">start|top</item>', s)
-              s=re.sub(r'<item name="android:(gravity|layout_gravity)">0x800053</item>', r'<item name="android:\1">start|bottom</item>', s)
               p.write_text(s,encoding='utf-8')
 
           for p in res.rglob('styles*.xml'):
@@ -117,6 +106,15 @@ jobs:
               s=p.read_text(encoding='utf-8',errors='replace')
               s=s.replace('@attr/??','@null').replace('?attr/??','@null').replace('>???<','>Unknown<')
               p.write_text(s,encoding='utf-8')
+
+          # Fail early with the exact XML file/line if reconstruction produced
+          # malformed XML. This avoids opaque aapt2 "mismatched tag" errors.
+          for p in res.rglob('*.xml'):
+              try:
+                  ET.parse(p)
+              except ET.ParseError as e:
+                  print(f'XML VALIDATION FAILED: {p}: {e}')
+                  raise
           PY
 
           python3 <<'PY'
