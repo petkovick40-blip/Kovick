@@ -24,10 +24,20 @@ public class MainActivity extends Activity {
         root.addView(button("🎮 Iniciar mapeador",v->KovickAccessibilityService.startOverlay(this)));
         root.addView(button("⌨️ Ativar acessibilidade",v->startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))));
         root.addView(button("📱 Permitir sobreposição",v->startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:"+getPackageName())))));
+        root.addView(button("📶 Configurar depuração sem fio",v->openWirelessDebugging()));
         root.addView(button("⚡ Autorizar Shizuku / ADB",v->authorizeShizuku()));
         root.addView(button("🎯 Editor de controles",v->KovickAccessibilityService.openEditor(this)));
         root.addView(button("💾 Escolher perfil",v->chooseProfile()));
         setContentView(root); refresh();
+    }
+    void openWirelessDebugging(){
+        new AlertDialog.Builder(this).setTitle("Depuração sem fio")
+            .setMessage("O Android não permite que o Kovick ative essa opção sozinho. Nas Opções do desenvolvedor, ative Depuração sem fio. Depois abra o Shizuku e inicie o serviço por depuração sem fio.")
+            .setPositiveButton("Abrir opções do desenvolvedor",(d,w)->{
+                try { startActivity(new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)); }
+                catch(Exception e){ startActivity(new Intent(Settings.ACTION_SETTINGS)); }
+            })
+            .setNegativeButton("Cancelar",null).show();
     }
     void chooseProfile(){
         String[] profiles={"Padrão","Free Fire","Roblox","Outros jogos"};
