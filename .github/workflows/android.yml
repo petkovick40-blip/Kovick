@@ -66,7 +66,7 @@ jobs:
                   p.write_text(''.join(lines[:idx[1]]).rstrip()+'\n',encoding='utf-8')
 
           enum_maps = {
-              'scaleType': {'3':'fitCenter','5':'center','6':'centerCrop','7':'centerInside','4':'fitEnd','2':'fitStart','1':'fitXY','0':'matrix'},
+              'scaleType': {'0':'matrix','1':'fitXY','2':'fitStart','3':'fitCenter','4':'fitEnd','5':'center','6':'centerCrop','7':'centerInside'},
               'ellipsize': {'0':'none','1':'start','2':'middle','3':'end','4':'marquee'},
               'orientation': {'0':'horizontal','1':'vertical'},
               'layoutDirection': {'0':'ltr','1':'rtl','2':'inherit','3':'locale'},
@@ -82,14 +82,22 @@ jobs:
               '0x1':'center_horizontal', '0x2':'left', '0x3':'left', '0x4':'right', '0x5':'right',
               '0x10':'center_vertical', '0x11':'center', '0x30':'top', '0x50':'bottom',
               '0x800003':'start', '0x800005':'end', '0x800013':'start|center_vertical',
-              '0x800033':'start|top', '0x800053':'start|bottom'
+              '0x800033':'start|top', '0x800053':'start|bottom',
+              '0x800055':'end|bottom'
           }
 
           def fix_style_file(p):
               s=p.read_text(encoding='utf-8',errors='replace')
+              # Reconstructed resources sometimes preserve the original numeric
+              # enum/flag representation as hexadecimal (for example 0x2).
+              # AAPT2 expects the symbolic resource value here.
               for attr,m in enum_maps.items():
                   for raw,name in m.items():
                       s=s.replace(f'<item name="android:{attr}">{raw}</item>', f'<item name="android:{attr}">{name}</item>')
+                  for raw,name in m.items():
+                      if raw.isdigit():
+                          hx=hex(int(raw))
+                          s=s.replace(f'<item name="android:{attr}">{hx}</item>', f'<item name="android:{attr}">{name}</item>')
               for attr in ('gravity','layout_gravity'):
                   for raw,name in gravity.items():
                       s=s.replace(f'<item name="android:{attr}">{raw}</item>', f'<item name="android:{attr}">{name}</item>')
@@ -107,8 +115,6 @@ jobs:
               s=s.replace('@attr/??','@null').replace('?attr/??','@null').replace('>???<','>Unknown<')
               p.write_text(s,encoding='utf-8')
 
-          # Fail early with the exact XML file/line if reconstruction produced
-          # malformed XML. This avoids opaque aapt2 "mismatched tag" errors.
           for p in res.rglob('*.xml'):
               try:
                   ET.parse(p)
