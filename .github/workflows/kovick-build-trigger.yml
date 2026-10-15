@@ -1,0 +1,11 @@
+name: Kovick Final Build Trigger
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  trigger:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Final build workflow is present at .github/workflows/kovick-build-final.yml"
