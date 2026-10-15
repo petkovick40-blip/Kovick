@@ -58,6 +58,30 @@ jobs:
           test -f AndroidManifest.xml
           grep -q 'com.zjx.jyandroid.MainApp.MainActivity' AndroidManifest.xml
 
+          # The original APK contains legacy/corrupt nine-patch chunks that modern aapt2 rejects.
+          # Rebuild those images as ordinary PNGs in the temporary build tree only.
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct, zlib
+
+          def png_size(p):
+              b=p.read_bytes()
+              if b[:8] != b'\x89PNG\r\n\x1a\n':
+                  return None
+              w,h=struct.unpack('>II',b[16:24])
+              return w,h
+
+          for p in Path('res').rglob('*.9.png'):
+              size=png_size(p)
+              if not size:
+                  continue
+              # Remove the nine-patch suffix; aapt2 will then treat it as a normal drawable.
+              q=p.with_name(p.name[:-6] + '.png')
+              if q.exists():
+                  q.unlink()
+              p.rename(q)
+          PY
+
           python3 - <<'PY'
           from pathlib import Path
           import re
