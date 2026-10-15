@@ -38,7 +38,11 @@ jobs:
           "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Install Apktool 2.9.3
-        run: curl -fsSL -o /tmp/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.9.3/apktool_2.9.3.jar
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.9.3/apktool_2.9.3.jar
+          echo "=== APKTOOL VERSION ==="
+          java -jar /tmp/apktool.jar --version
 
       - name: Prepare reconstructed project
         run: |
