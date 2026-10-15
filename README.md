@@ -1,5 +1,5 @@
 # Kovick
 
-Repositório do projeto Kovick.
+Standalone Android keymapper project.
 
-Status: estrutura inicial criada. A base Android ainda precisa ser enviada para este repositório.
+Includes keyboard mapping, on-screen editable controls, AccessibilityService injection, Shizuku authorization support, and local profiles. Login is intentionally not included.
