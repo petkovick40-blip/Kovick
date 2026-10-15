@@ -1,191 +1,114 @@
 name: Android APK Fixed
+
 on:
-  workflow_dispatch:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Prepare Android SDK
-        shell: bash
         run: |
-          set -euxo pipefail
-          export ANDROID_SDK_ROOT="$HOME/android-sdk"
-          export ANDROID_HOME="$ANDROID_SDK_ROOT"
-          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-          curl -fsSL -o /tmp/cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
-          rm -rf /tmp/android-cmdline
-          mkdir -p /tmp/android-cmdline
-          unzip -q /tmp/cmdline-tools.zip -d /tmp/android-cmdline
-          cp -a /tmp/android-cmdline/cmdline-tools/. "$ANDROID_SDK_ROOT/cmdline-tools/latest/"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
-          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
-          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          echo "$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
-          echo "$ANDROID_SDK_ROOT/build-tools/36.0.0" >> "$GITHUB_PATH"
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          set -e
+          mkdir -p "$RUNNER_TEMP/cmdline-tools"
+          curl -fsSL -o "$RUNNER_TEMP/cmdline-tools.zip" https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
+          unzip -q "$RUNNER_TEMP/cmdline-tools.zip" -d "$RUNNER_TEMP/cmdline-tools"
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+          rm -rf "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+          mv "$RUNNER_TEMP/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
 
       - name: Install Android build tools
-        shell: bash
         run: |
-          set -euxo pipefail
-          sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          set -e
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Harden Application
-        shell: bash
         run: |
-          if git cat-file -e f08b662c8d33444f7296787f8ec6835472d67ef2:smali/com/zjx/jyandroid/App.smali 2>/dev/null; then
-            mkdir -p smali/com/zjx/jyandroid
-            git show f08b662c8d33444f7296787f8ec6835472d67ef2:smali/com/zjx/jyandroid/App.smali > smali/com/zjx/jyandroid/App.smali
-          fi
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('smali/com/zjx/jyandroid/App.smali')
-          if p.exists():
-              s=p.read_text(errors='ignore')
-              a=s.find('.method public onCreate()V')
-              if a>=0:
-                  b=s.find('.end method',a)
-                  if b>=0:
-                      b+=len('.end method')
-                      s=s[:a]+'.method public onCreate()V\n    .locals 0\n    invoke-super {p0}, Landroid/app/Application;->onCreate()V\n    return-void\n.end method'+s[b:]
-                      p.write_text(s)
-          PY
+          set -e
+          test -f resources/AndroidManifest.xml
+          test -f smali/com/zjx/jyandroid/MainApp/MainActivity.smali
 
       - name: Install Apktool
-        run: curl -L --fail -o /tmp/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar
+        run: |
+          curl -fsSL -o /tmp/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar
 
       - name: Prepare reconstructed project
-        shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           rm -rf build-src
-          mkdir -p build-src
-          tar --exclude=./build-src --exclude=./.git --exclude=./.github --exclude=./diagnostics -cf - . | tar -xf - -C build-src
+          mkdir build-src
+          tar --exclude='./build-src' --exclude='./.git' --exclude='./.github' -cf - . | tar -xf - -C build-src
           cd build-src
 
-          # The repository contains the original decompiled AndroidManifest.xml under resources.
-          # Use it as the source of truth so the real launcher Activity is preserved.
-          if [ -f resources/AndroidManifest.xml ]; then
-            cp resources/AndroidManifest.xml AndroidManifest.xml
-          elif [ -f AndroidManifest.xml ]; then
-            cp AndroidManifest.xml AndroidManifest.xml
-          else
-            echo 'No AndroidManifest.xml found' >&2
-            exit 1
-          fi
-
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          p=Path('AndroidManifest.xml')
-          s=p.read_text(errors='ignore')
-          # Ensure the original launcher remains exported on modern Android.
-          s=re.sub(r'(android:name="com\.zjx\.jyandroid\.MainApp\.MainActivity"[^>]*?)\s+android:exported="[^"]*"', r'\1 android:exported="true"', s)
-          if 'com.zjx.jyandroid.MainApp.MainActivity' not in s:
-              raise SystemExit('Original launcher MainActivity was not found in manifest')
-          p.write_text(s)
-          print('Using original manifest with com.zjx.jyandroid.MainApp.MainActivity')
-          PY
-
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('apktool.yml')
-          if p.exists():
-              lines=p.read_text().splitlines(); out=[]; seen=False
-              for x in lines:
-                  if x.strip()=='keepRawValues: false':
-                      if seen: continue
-                      seen=True
-                  out.append(x)
-              p.write_text('\n'.join(out)+'\n')
-          else:
-              p.write_text('''version: 3\napkFileName: Kovick.apk\nisFrameworkApk: false\nusesFramework:\n  ids:\n    - 1\n  tag: null\nsdkInfo:\n  minSdkVersion: 23\n  targetSdkVersion: 36\npackageInfo:\n  forcedPackageId: 127\n  renameManifestPackage: null\nunknownFiles: {}\ndoNotCompress: []\n''')
-          PY
-
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          roots = [Path('smali')] + sorted(Path('.').glob('smali_classes*'))
-          total = 0
-          for root in roots:
-              if not root.is_dir(): continue
-              for src in list(root.rglob('*.smali')):
-                  text=src.read_text(errors='ignore')
-                  matches=list(re.finditer(r'(?m)^\.class\b[^\n]*$',text))
-                  if len(matches)<=1: continue
-                  chunks=[]
-                  for i,m in enumerate(matches):
-                      end=matches[i+1].start() if i+1<len(matches) else len(text)
-                      chunk=text[m.start():end]
-                      cm=re.match(r'(?m)^\.class\s+(?:[^\n]*\s)?L([^;]+);',chunk)
-                      if not cm: raise SystemExit(f'Cannot determine class descriptor in {src}')
-                      dst=root/(cm.group(1)+'.smali'); dst.parent.mkdir(parents=True,exist_ok=True)
-                      if dst.exists() and dst.resolve()!=src.resolve(): raise SystemExit(f'Duplicate smali class target: {dst}')
-                      chunks.append((dst,chunk))
-                  for dst,chunk in chunks: dst.write_text(chunk); total+=1
-                  src.unlink()
-          print(f'Split multi-class smali files: {total} class files created')
-          PY
-
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          roots=[Path('smali')]+sorted(Path('.').glob('smali_classes*'))
-          bad=[]
-          for root in roots:
-              if not root.is_dir(): continue
-              for f in root.rglob('*.smali'):
-                  n=len(re.findall(r'(?m)^\.class\b',f.read_text(errors='ignore')))
-                  if n!=1: bad.append((str(f),n))
-          if bad:
-              for f,n in bad[:20]: print(f'Invalid class count {n}: {f}')
-              raise SystemExit(f'Found {len(bad)} invalid smali files')
-          print('Smali validation OK')
-          PY
-
-          if [ -d smali ]; then
-            python3 - <<'PY'
-          from pathlib import Path
-          limit=30000; count=0; dex=1
-          files=[]
-          for f in Path('smali').rglob('*.smali'):
-              n=sum(1 for x in f.read_text(errors='ignore').splitlines() if x.lstrip().startswith('.method'))
-              files.append((f,n))
-          for f,n in files:
-              if count+n>limit and count:
-                  dex+=1; Path(f'smali_classes{dex}').mkdir(parents=True,exist_ok=True); count=0
-              if dex>1:
-                  d=Path(f'smali_classes{dex}')/f.relative_to('smali'); d.parent.mkdir(parents=True,exist_ok=True); f.rename(d)
-              count+=n
-          print('Dex partitions:',dex)
-          PY
-          fi
-
-          test -f AndroidManifest.xml
+          cp resources/AndroidManifest.xml AndroidManifest.xml
           grep -q 'com.zjx.jyandroid.MainApp.MainActivity' AndroidManifest.xml
+          if grep -q 'android:name="com.zjx.jyandroid.MainApp.MainActivity"' AndroidManifest.xml && ! grep -q 'android:name="com.zjx.jyandroid.MainApp.MainActivity"[^>]*android:exported="true"' AndroidManifest.xml; then
+            sed -i 's#android:name="com.zjx.jyandroid.MainApp.MainActivity"#android:name="com.zjx.jyandroid.MainApp.MainActivity" android:exported="true"#' AndroidManifest.xml
+          fi
+
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          roots=[Path('smali')]+sorted(Path('.').glob('smali_classes*'))
+          for root in roots:
+              if not root.is_dir(): continue
+              for p in list(root.rglob('*.smali')):
+                  text=p.read_text(errors='ignore')
+                  matches=list(re.finditer(r'^\\.class\\s+[^\\n]*?(L[^;\\s]+;)', text, re.M))
+                  if len(matches)<=1: continue
+                  parts=[]
+                  for i,m in enumerate(matches):
+                      start=m.start(); end=matches[i+1].start() if i+1<len(matches) else len(text)
+                      block=text[start:end]
+                      desc=m.group(1)
+                      rel=desc[1:-1]+'.smali'
+                      out=root/rel
+                      out.parent.mkdir(parents=True,exist_ok=True)
+                      out.write_text(block)
+                      parts.append(out)
+                  p.unlink()
+          PY
+
+          python3 - <<'PY'
+          from pathlib import Path
+          roots=[Path('smali')]+sorted(Path('.').glob('smali_classes*'))
+          for root in roots:
+              if not root.is_dir(): continue
+              for p in root.rglob('*.smali'):
+                  n=p.read_text(errors='ignore').count('.class ')
+                  if n != 1:
+                      raise SystemExit(f'{p}: expected 1 .class, found {n}')
+          PY
+
+          rm -f apktool.yml
+          cat > apktool.yml <<'EOF'
+          version: 2.9.3
+          apkFileName: Kovick.apk
+          isFrameworkApk: false
+          usesFramework: []
+          sdkInfo:
+            minSdkVersion: '23'
+            targetSdkVersion: '36'
+          EOF
 
       - name: Build APK
-        shell: bash
         run: |
           set -euo pipefail
           cd build-src
           java -jar /tmp/apktool.jar b . -o ../Kovick-unsigned.apk
-          test -s ../Kovick-unsigned.apk
-          unzip -l ../Kovick-unsigned.apk | grep -q 'AndroidManifest.xml'
-          zipalign -f 4 ../Kovick-unsigned.apk ../Kovick-aligned.apk
-          keytool -genkeypair -v -keystore /tmp/kovick.keystore -alias kovick -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Kovick,O=Kovick,C=BR" >/dev/null 2>&1
-          apksigner sign --ks /tmp/kovick.keystore --ks-pass pass:android --key-pass pass:android --min-sdk-version 23 --out ../Kovick.apk ../Kovick-aligned.apk
-          apksigner verify --verbose --min-sdk-version 23 ../Kovick.apk
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 ../Kovick-unsigned.apk ../Kovick-aligned.apk
+          keytool -genkeypair -v -keystore /tmp/kovick.keystore -storepass android -keypass android -alias kovick -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Kovick"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign --ks /tmp/kovick.keystore --ks-pass pass:android --key-pass pass:android --min-sdk-version 23 --out ../Kovick.apk ../Kovick-aligned.apk
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" verify --verbose ../Kovick.apk
 
       - uses: actions/upload-artifact@v4
         with:
