@@ -32,6 +32,7 @@ jobs:
 
       - name: Install Apktool
         run: |
+          set -euo pipefail
           curl -fsSL https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar -o "$RUNNER_TEMP/apktool.jar"
           printf '#!/usr/bin/env bash\nexec java -jar "%s/apktool.jar" "$@"\n' "$RUNNER_TEMP" | sudo tee /usr/local/bin/apktool >/dev/null
           sudo chmod +x /usr/local/bin/apktool
@@ -43,12 +44,66 @@ jobs:
           test -f resources/AndroidManifest.xml
           test -d resources/res
           test -d smali
+
+          rm -rf build-src
           mkdir -p build-src
           cp resources/AndroidManifest.xml build-src/AndroidManifest.xml
           cp -a resources/res build-src/res
           if [ -d resources/assets ]; then cp -a resources/assets build-src/assets; fi
           if [ -d resources/lib ]; then cp -a resources/lib build-src/lib; fi
           cp -a smali build-src/smali
+
+          # The reconstructed project contains files named .9.png that are not
+          # valid Android 9-patches. AAPT2 rejects malformed 9-patch metadata,
+          # so normalize them to ordinary PNG resources before compilation.
+          python3 <<'PY'
+          from pathlib import Path
+          res = Path("build-src/res")
+          renamed = 0
+          removed = 0
+          for p in res.rglob("*.9.png"):
+              normal = p.with_name(p.name[:-6] + ".png")
+              if normal.exists():
+                  p.unlink()
+                  removed += 1
+              else:
+                  p.rename(normal)
+                  renamed += 1
+          print(f"9-patch normalization: renamed={renamed}, removed_duplicates={removed}")
+          PY
+
+          # Some reconstructed smali files can contain a second class header.
+          # Apktool expects one class declaration per file; keep the first class
+          # and discard an accidental concatenated second class.
+          python3 <<'PY'
+          from pathlib import Path
+          root = Path("build-src/smali")
+          repaired = 0
+          for p in root.rglob("*.smali"):
+              text = p.read_text(encoding="utf-8", errors="replace")
+              lines = text.splitlines(keepends=True)
+              indexes = [i for i, line in enumerate(lines) if line.startswith(".class ")]
+              if len(indexes) > 1:
+                  p.write_text("".join(lines[:indexes[1]]).rstrip() + "\n", encoding="utf-8")
+                  repaired += 1
+          print(f"Smali files repaired: {repaired}")
+          PY
+
+          python3 <<'PY'
+          from pathlib import Path
+          root = Path("build-src/smali")
+          bad = []
+          for p in root.rglob("*.smali"):
+              text = p.read_text(encoding="utf-8", errors="replace")
+              count = text.count(".class ")
+              if count != 1:
+                  bad.append((str(p), count))
+          if bad:
+              print("Invalid smali class layout:")
+              for path, count in bad[:20]:
+                  print(f"  {path}: {count} .class declarations")
+              raise SystemExit(1)
+          PY
 
           cat > build-src/apktool.yml <<'YAML'
           version: 3.0.3
@@ -83,16 +138,39 @@ jobs:
           YAML
 
       - name: Build unsigned APK
-        run: apktool b build-src -o "$RUNNER_TEMP/Kovick-unsigned.apk"
+        run: |
+          set -euo pipefail
+          apktool b build-src -o "$RUNNER_TEMP/Kovick-unsigned.apk"
+          test -s "$RUNNER_TEMP/Kovick-unsigned.apk"
 
       - name: Align and sign APK
         run: |
           set -euo pipefail
           BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
-          keytool -genkeypair -v             -keystore "$RUNNER_TEMP/kovick-debug.keystore"             -storepass android -keypass android             -alias kovick -keyalg RSA -keysize 2048 -validity 10000             -dname "CN=Kovick, OU=Build, O=Kovick, L=Unknown, ST=Unknown, C=BR"
-          "$BUILD_TOOLS/zipalign" -f -p 4             "$RUNNER_TEMP/Kovick-unsigned.apk"             "$RUNNER_TEMP/Kovick-aligned.apk"
-          "$BUILD_TOOLS/apksigner" sign             --ks "$RUNNER_TEMP/kovick-debug.keystore"             --ks-pass pass:android --key-pass pass:android             --out "$RUNNER_TEMP/Kovick.apk"             "$RUNNER_TEMP/Kovick-aligned.apk"
+
+          keytool -genkeypair -v \
+            -keystore "$RUNNER_TEMP/kovick-debug.keystore" \
+            -storepass android \
+            -keypass android \
+            -alias kovick \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Kovick, OU=Build, O=Kovick, L=Unknown, ST=Unknown, C=BR"
+
+          "$BUILD_TOOLS/zipalign" -f -p 4 \
+            "$RUNNER_TEMP/Kovick-unsigned.apk" \
+            "$RUNNER_TEMP/Kovick-aligned.apk"
+
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks "$RUNNER_TEMP/kovick-debug.keystore" \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --out "$RUNNER_TEMP/Kovick.apk" \
+            "$RUNNER_TEMP/Kovick-aligned.apk"
+
           "$BUILD_TOOLS/apksigner" verify --verbose "$RUNNER_TEMP/Kovick.apk"
+          test -s "$RUNNER_TEMP/Kovick.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -101,3 +179,4 @@ jobs:
           path: ${{ runner.temp }}/Kovick.apk
           if-no-files-found: error
           retention-days: 14
+          overwrite: true
