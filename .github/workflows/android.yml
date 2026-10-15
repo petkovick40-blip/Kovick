@@ -51,8 +51,28 @@ jobs:
           done
           cd build-src
           rm -rf .git .github diagnostics
-          if [ -f apktool.yml ]; then
-            python3 - <<'PY'
+
+          # Reconstructed APKs may not contain apktool.yml in the repository.
+          # Apktool requires this metadata file when building a decoded project.
+          if [ ! -f apktool.yml ]; then
+            cat > apktool.yml <<'YAML'
+          version: 3.0.3
+          apkFileName: Kovick.apk
+          isFrameworkApk: false
+          usesFramework:
+            ids:
+              - 1
+            tag: null
+          sdkInfo:
+            minSdkVersion: '27'
+            targetSdkVersion: '35'
+          packageInfo:
+            forcedPackageId: '127'
+            renameManifestPackage: null
+          YAML
+          fi
+
+          python3 - <<'PY'
           from pathlib import Path
           p=Path('apktool.yml')
           lines=p.read_text().splitlines(); out=[]; seen=False
@@ -63,7 +83,7 @@ jobs:
               out.append(line)
           p.write_text('\n'.join(out)+'\n')
           PY
-          fi
+
           if [ -d smali ]; then
             python3 - <<'PY'
           from pathlib import Path
@@ -85,6 +105,7 @@ jobs:
           print('Dex partitions:', dex)
           PY
           fi
+
           python3 - <<'PY'
           from pathlib import Path
           import re
