@@ -159,7 +159,7 @@ jobs:
                       chunk = text[m.start():end]
                       cm = re.match(r'(?m)^\.class\s+(?:[^\n]*\s)?L([^;]+);', chunk)
                       if not cm:
-                          raise SystemExit(f'Cannot determine class descriptor in {src} at line {text[:m.start()].count(chr(10))+1}')
+                          raise SystemExit(f'Cannot determine class descriptor in {src}')
                       rel = Path(cm.group(1) + '.smali')
                       dst = root / rel
                       dst.parent.mkdir(parents=True, exist_ok=True)
@@ -225,7 +225,7 @@ jobs:
           unzip -l ../Kovick-unsigned.apk | grep -q 'AndroidManifest.xml'
           zipalign -f 4 ../Kovick-unsigned.apk ../Kovick-aligned.apk
           keytool -genkeypair -v -keystore /tmp/kovick.keystore -alias kovick -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Kovick,O=Kovick,C=BR" >/dev/null 2>&1
-          apksigner sign --ks /tmp/kovick.keystore --ks-pass pass:android --key-pass android --min-sdk-version 23 --out ../Kovick.apk ../Kovick-aligned.apk
+          apksigner sign --ks /tmp/kovick.keystore --ks-pass pass:android --key-pass pass:android --min-sdk-version 23 --out ../Kovick.apk ../Kovick-aligned.apk
           apksigner verify --verbose --min-sdk-version 23 ../Kovick.apk
 
       - uses: actions/upload-artifact@v4
@@ -234,4 +234,4 @@ jobs:
           path: Kovick.apk
           if-no-files-found: error
 
-# Build trigger: split decompiled multi-class smali files before rebuilding.
+# Build trigger: fix apksigner password specification.
