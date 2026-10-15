@@ -140,13 +140,67 @@ jobs:
                       return f'<item name="{name}">{"match_parent" if val=="-1" else "wrap_content"}</item>'
                   if bare in flag_maps and val.lower() in flag_maps[bare]:
                       return f'<item name="{name}">{flag_maps[bare][val.lower()]}</item>'
-                  if bare in ('breakStrategy','hyphenationFrequency') and val.isdigit():
-                      return m.group(0)
                   return m.group(0)
               s=re.sub(r'<item name="([^"]+)">([^<]+)</item>', repl, s)
-              # A literal decompiled "???" is interpreted by aapt2 as a theme attr.
               s=s.replace('>???<','>&#63;&#63;&#63;<')
               p.write_text(s)
+          PY
+
+          # A single dex cannot contain more than 65535 method references.
+          # The reconstructed repository stores all classes under smali/, so
+          # rebuild them into conservative multidex groups before Apktool runs.
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, shutil
+
+          base=Path('smali')
+          classes=[p for p in base.rglob('*.smali')]
+          classes.sort(key=lambda p: str(p))
+
+          def method_count(p):
+              return len(re.findall(r'(?m)^\.method\b', p.read_text(errors='ignore')))
+
+          # Keep launcher/application classes in the primary dex.
+          priority=[]
+          normal=[]
+          for p in classes:
+              s=str(p).replace('\\','/')
+              if s.endswith('/com/zjx/jyandroid/MainApp/MainActivity.smali') or s.endswith('/com/zjx/jyandroid/App.smali'):
+                  priority.append(p)
+              else:
+                  normal.append(p)
+
+          ordered=priority+normal
+          for d in Path('.').glob('smali_classes*'):
+              if d.is_dir(): shutil.rmtree(d)
+
+          LIMIT=45000
+          groups=[]
+          current=[]
+          count=0
+          for p in ordered:
+              n=method_count(p)
+              if current and count+n>LIMIT:
+                  groups.append(current)
+                  current=[]
+                  count=0
+              current.append(p)
+              count += n
+          if current: groups.append(current)
+
+          for gi, group in enumerate(groups):
+              target=base if gi==0 else Path(f'smali_classes{gi+1}')
+              target.mkdir(parents=True,exist_ok=True)
+              total=0
+              for src in group:
+                  rel=src.relative_to(base)
+                  dst=target/rel
+                  dst.parent.mkdir(parents=True,exist_ok=True)
+                  if src.resolve()!=dst.resolve():
+                      shutil.move(str(src),str(dst))
+                  total += method_count(dst)
+              print(f'MULTIDEX_GROUP {gi+1}: {len(group)} classes, {total} methods')
+          print(f'MULTIDEX_GROUPS_TOTAL {len(groups)}')
           PY
 
           cat > apktool.yml <<'EOF'
