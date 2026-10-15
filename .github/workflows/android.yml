@@ -12,13 +12,134 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Prepare build workspace
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
         shell: bash
         run: |
+          set -e
+          export ANDROID_SDK_ROOT="$HOME/android-sdk"
+          export ANDROID_HOME="$ANDROID_SDK_ROOT"
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+          curl -fsSL -o /tmp/cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
+          unzip -q /tmp/cmdline-tools.zip -d /tmp/android-cmdline
+          cp -a /tmp/android-cmdline/cmdline-tools/. "$ANDROID_SDK_ROOT/cmdline-tools/latest/"
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+          echo "$ANDROID_SDK_ROOT/build-tools/36.0.0" >> "$GITHUB_PATH"
+
+      - name: Install Apktool
+        run: curl -fsSL -o /tmp/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar
+
+      - name: Prepare reconstructed project
+        shell: bash
+        run: |
+          set -e
           rm -rf build-src
           mkdir build-src
           shopt -s dotglob nullglob
           for item in *; do
-            if [ "$item" != "build-src" ]; then cp -a "$item" build-src/; fi
+            [ "$item" = "build-src" ] || cp -a "$item" build-src/
           done
-          echo "Workspace prepared"
+          cd build-src
+          rm -rf .git .github diagnostics
+          if [ -f apktool.yml ]; then
+            python3 - <<'PY'
+          from pathlib import Path
+          p=Path('apktool.yml')
+          lines=p.read_text().splitlines(); out=[]; seen=False
+          for line in lines:
+              if line.strip() == 'keepRawValues: false':
+                  if seen: continue
+                  seen=True
+              out.append(line)
+          p.write_text('\n'.join(out)+'\n')
+          PY
+          fi
+          if [ -d smali ]; then
+            python3 - <<'PY'
+          from pathlib import Path
+          limit=30000; count=0; dex=1
+          files=[]
+          for f in Path('smali').rglob('*.smali'):
+              n=sum(1 for x in f.read_text(errors='ignore').splitlines() if x.lstrip().startswith('.method'))
+              files.append((f,n))
+          for f,n in files:
+              if count+n > limit and count:
+                  dex += 1
+                  Path(f'smali_classes{dex}').mkdir(parents=True,exist_ok=True)
+                  count=0
+              if dex > 1:
+                  dest=Path(f'smali_classes{dex}')/f.relative_to('smali')
+                  dest.parent.mkdir(parents=True,exist_ok=True)
+                  f.rename(dest)
+              count += n
+          print('Dex partitions:', dex)
+          PY
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          maps={
+          'scaleType':{'0':'matrix','1':'fitXY','2':'fitStart','3':'fitCenter','4':'fitEnd','5':'center','6':'centerCrop','7':'centerInside'},
+          'ellipsize':{'0':'none','1':'start','2':'middle','3':'end','4':'marquee'},
+          'orientation':{'0':'horizontal','1':'vertical'},
+          'layoutDirection':{'0':'ltr','1':'rtl','2':'inherit','3':'locale'},
+          'textAlignment':{'0':'inherit','1':'gravity','2':'textStart','3':'textEnd','4':'center','5':'viewStart','6':'viewEnd'},
+          'visibility':{'0':'visible','1':'invisible','2':'gone'},
+          'datePickerMode':{'1':'spinner','2':'calendar'},
+          'breakStrategy':{'0':'simple','1':'high_quality','2':'balanced'},
+          'hyphenationFrequency':{'0':'none','1':'normal','2':'full','3':'fast','4':'full'},
+          }
+          pat=re.compile(r'(<item\b[^>]*name=["\'](?:android:)?([^"\']+)["\'][^>]*>)(.*?)(</item>)',re.S|re.I)
+          for p in Path('res').rglob('*.xml'):
+              try: s=p.read_text()
+              except: continue
+              old=s
+              def repl(m):
+                  h,n,v,t=m.groups(); v=v.strip()
+                  if n in ('layout_width','layout_height') and v in ('-1','-2'):
+                      v={'-1':'match_parent','-2':'wrap_content'}[v]
+                  elif n in maps and v in maps[n]: v=maps[n][v]
+                  return h+v+t
+              s=pat.sub(repl,s)
+              if s!=old: p.write_text(s)
+          PY
+
+      - name: Validate resources
+        run: |
+          cd build-src
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          for p in Path('res').rglob('*.xml'):
+              try: ET.parse(p)
+              except Exception as e: raise SystemExit(f'Invalid XML: {p}: {e}')
+          PY
+
+      - name: Build APK
+        shell: bash
+        run: |
+          set -e
+          cd build-src
+          java -jar /tmp/apktool.jar b . -o ../Kovick-unsigned.apk --use-aapt2
+          cd ..
+          zipalign -f 4 Kovick-unsigned.apk Kovick-aligned.apk
+          keytool -genkeypair -v -keystore /tmp/kovick.keystore -alias kovick -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname 'CN=Kovick,OU=Kovick,O=Kovick,L=BR,ST=BA,C=BR' >/dev/null 2>&1
+          apksigner sign --ks /tmp/kovick.keystore --ks-pass pass:android --key-pass pass:android --out Kovick.apk Kovick-aligned.apk
+          apksigner verify --verbose Kovick.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kovick-APK
+          path: Kovick.apk
+          if-no-files-found: error
