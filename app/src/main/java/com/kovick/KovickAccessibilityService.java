@@ -21,6 +21,11 @@ public class KovickAccessibilityService extends AccessibilityService {
             KEY_S=KeyEvent.KEYCODE_S, KEY_D=KeyEvent.KEYCODE_D,
             KEY_FIRE=KeyEvent.KEYCODE_SPACE, KEY_AIM=KeyEvent.KEYCODE_N;
 
+    String profile() {
+        return getSharedPreferences("profiles", 0).getString("current_profile", "Padrão");
+    }
+    String prefKey(String name, int key) { return profile() + "_" + name + "_" + key; }
+
     @Override protected void onServiceConnected() {
         super.onServiceConnected();
         instance = this;
@@ -41,12 +46,12 @@ public class KovickAccessibilityService extends AccessibilityService {
     @Override public boolean onKeyEvent(KeyEvent e) {
         if (prefs == null || e == null) return false;
         int key = e.getKeyCode();
-        String action = prefs.getString("map_" + key, "");
+        String action = prefs.getString(prefKey("map", key), "");
         if (action.isEmpty()) return false;
         if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
-            float x = prefs.getFloat("key_" + key + "_x",
+            float x = prefs.getFloat(prefKey("x", key),
                     getResources().getDisplayMetrics().widthPixels * .5f);
-            float y = prefs.getFloat("key_" + key + "_y",
+            float y = prefs.getFloat(prefKey("y", key),
                     getResources().getDisplayMetrics().heightPixels * .5f);
             tap(x, y);
         }
@@ -94,8 +99,11 @@ public class KovickAccessibilityService extends AccessibilityService {
         v.setTextSize(12);
         v.setGravity(Gravity.CENTER);
         v.setBackgroundColor(0xaa8b5cf6);
-        int x = (int)(getResources().getDisplayMetrics().widthPixels * fx) - 44;
-        int y = (int)(getResources().getDisplayMetrics().heightPixels * fy) - 44;
+        String xPref = prefKey("x", key), yPref = prefKey("y", key);
+        int x = prefs.contains(xPref) ? (int)prefs.getFloat(xPref, 0) - 44 :
+                (int)(getResources().getDisplayMetrics().widthPixels * fx) - 44;
+        int y = prefs.contains(yPref) ? (int)prefs.getFloat(yPref, 0) - 44 :
+                (int)(getResources().getDisplayMetrics().heightPixels * fy) - 44;
         addFloating(v, x, y, 88, 88);
         v.setOnTouchListener(new View.OnTouchListener() {
             float sx, sy;
@@ -120,8 +128,8 @@ public class KovickAccessibilityService extends AccessibilityService {
                 if (e.getAction() == MotionEvent.ACTION_UP) {
                     WindowManager.LayoutParams q=(WindowManager.LayoutParams)view.getLayoutParams();
                     float cx=q.x+44, cy=q.y+44;
-                    prefs.edit().putFloat("key_"+key+"_x",cx).putFloat("key_"+key+"_y",cy)
-                            .putString("map_"+key,"tap").apply();
+                    prefs.edit().putFloat(xPref,cx).putFloat(yPref,cy)
+                            .putString(prefKey("map",key),"tap").apply();
                     return true;
                 }
                 return true;
