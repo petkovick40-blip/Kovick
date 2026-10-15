@@ -164,12 +164,12 @@ jobs:
         run: |
           set -euo pipefail
           cd build-src
-          java -jar /tmp/apktool.jar b . -o ../Kovick-unsigned.apk --use-aapt2
+          java -jar /tmp/apktool.jar b . -o ../Kovick-unsigned.apk
           test -s ../Kovick-unsigned.apk
           unzip -l ../Kovick-unsigned.apk | grep -q 'AndroidManifest.xml'
           zipalign -f 4 ../Kovick-unsigned.apk ../Kovick-aligned.apk
           keytool -genkeypair -v -keystore /tmp/kovick.keystore -alias kovick -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Kovick,O=Kovick,C=BR" >/dev/null 2>&1
-          apksigner sign --ks /tmp/kovick.keystore --ks-pass pass:android --key-pass pass:android --min-sdk-version 23 --out ../Kovick.apk ../Kovick-aligned.apk
+          apksigner sign --ks /tmp/kovick.keystore --ks-pass pass:android --key-pass android --min-sdk-version 23 --out ../Kovick.apk ../Kovick-aligned.apk
           apksigner verify --verbose --min-sdk-version 23 ../Kovick.apk
 
       - uses: actions/upload-artifact@v4
