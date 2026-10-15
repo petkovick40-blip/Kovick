@@ -140,6 +140,56 @@ jobs:
               print('Generated minimal apktool.yml')
           PY
 
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          roots = [Path('smali')] + sorted(Path('.').glob('smali_classes*'))
+          total = 0
+          for root in roots:
+              if not root.is_dir():
+                  continue
+              for src in list(root.rglob('*.smali')):
+                  text = src.read_text(errors='ignore')
+                  matches = list(re.finditer(r'(?m)^\.class\b[^\n]*$', text))
+                  if len(matches) <= 1:
+                      continue
+                  chunks = []
+                  for i, m in enumerate(matches):
+                      end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+                      chunk = text[m.start():end]
+                      cm = re.match(r'(?m)^\.class\s+(?:[^\n]*\s)?L([^;]+);', chunk)
+                      if not cm:
+                          raise SystemExit(f'Cannot determine class descriptor in {src} at line {text[:m.start()].count(chr(10))+1}')
+                      rel = Path(cm.group(1) + '.smali')
+                      dst = root / rel
+                      dst.parent.mkdir(parents=True, exist_ok=True)
+                      if dst.exists() and dst.resolve() != src.resolve():
+                          raise SystemExit(f'Duplicate smali class target: {dst}')
+                      chunks.append((dst, chunk))
+                  for dst, chunk in chunks:
+                      dst.write_text(chunk)
+                      total += 1
+                  src.unlink()
+          print(f'Split multi-class smali files: {total} class files created')
+          PY
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          roots = [Path('smali')] + sorted(Path('.').glob('smali_classes*'))
+          bad=[]
+          for root in roots:
+              if not root.is_dir(): continue
+              for f in root.rglob('*.smali'):
+                  n=len(re.findall(r'(?m)^\.class\b', f.read_text(errors='ignore')))
+                  if n != 1:
+                      bad.append((str(f),n))
+          if bad:
+              for f,n in bad[:20]: print(f'Invalid class count {n}: {f}')
+              raise SystemExit(f'Found {len(bad)} invalid smali files')
+          print('Smali validation: every file contains exactly one .class directive')
+          PY
+
           if [ -d smali ]; then
             python3 - <<'PY'
           from pathlib import Path
@@ -184,4 +234,4 @@ jobs:
           path: Kovick.apk
           if-no-files-found: error
 
-# Build trigger: validate the APK pipeline with the reconstructed Apktool metadata.
+# Build trigger: split decompiled multi-class smali files before rebuilding.
