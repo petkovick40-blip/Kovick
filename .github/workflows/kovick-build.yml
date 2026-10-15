@@ -1,0 +1,104 @@
+name: Kovick APK Build
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ANDROID_SDK_ROOT="$HOME/android-sdk"
+          export ANDROID_HOME="$ANDROID_SDK_ROOT"
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+          curl -fsSL -o /tmp/cmdline.zip https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
+          mkdir -p /tmp/cmdline
+          unzip -q /tmp/cmdline.zip -d /tmp/cmdline
+          cp -a /tmp/cmdline/cmdline-tools/. "$ANDROID_SDK_ROOT/cmdline-tools/latest/"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+          echo "$ANDROID_SDK_ROOT/build-tools/36.0.0" >> "$GITHUB_PATH"
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install Apktool
+        run: curl -fsSL -o /tmp/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar
+
+      - name: Prepare project
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf build-src
+          mkdir build-src
+          tar --exclude='./build-src' --exclude='./.git' --exclude='./.github' -cf - . | tar -xf - -C build-src
+          cd build-src
+          cp resources/AndroidManifest.xml AndroidManifest.xml
+          grep -q 'com.zjx.jyandroid.MainApp.MainActivity' AndroidManifest.xml
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          roots=[Path('smali')]+sorted(Path('.').glob('smali_classes*'))
+          for root in roots:
+              if not root.is_dir():
+                  continue
+              for src in list(root.rglob('*.smali')):
+                  text=src.read_text(errors='ignore')
+                  matches=list(re.finditer(r'(?m)^\.class\s+[^\n]*?(L[^;\s]+;)', text))
+                  if len(matches)<=1:
+                      continue
+                  for i,m in enumerate(matches):
+                      end=matches[i+1].start() if i+1<len(matches) else len(text)
+                      dst=root/(m.group(1)[1:-1]+'.smali')
+                      dst.parent.mkdir(parents=True,exist_ok=True)
+                      dst.write_text(text[m.start():end])
+                  src.unlink()
+          for root in roots:
+              if root.is_dir():
+                  for f in root.rglob('*.smali'):
+                      if len(re.findall(r'(?m)^\.class\b',f.read_text(errors='ignore'))) != 1:
+                          raise SystemExit(f'Invalid smali: {f}')
+          PY
+          cat > apktool.yml <<'EOF'
+          version: 2.9.3
+          apkFileName: Kovick.apk
+          isFrameworkApk: false
+          usesFramework: []
+          sdkInfo:
+            minSdkVersion: '27'
+            targetSdkVersion: '35'
+          EOF
+
+      - name: Build and sign APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd build-src
+          java -jar /tmp/apktool.jar b . -o ../Kovick-unsigned.apk
+          zipalign -f -p 4 ../Kovick-unsigned.apk ../Kovick-aligned.apk
+          keytool -genkeypair -v -keystore /tmp/kovick.keystore -storepass android -keypass android -alias kovick -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Kovick,O=Kovick,C=BR" >/dev/null 2>&1
+          apksigner sign --ks /tmp/kovick.keystore --ks-pass pass:android --key-pass pass:android --min-sdk-version 27 --out ../Kovick.apk ../Kovick-aligned.apk
+          apksigner verify --verbose --min-sdk-version 27 ../Kovick.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kovick-APK
+          path: Kovick.apk
+          if-no-files-found: error
