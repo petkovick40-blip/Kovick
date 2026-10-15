@@ -1,26 +1,101 @@
-name: Android CI
+name: Build Kovick APK
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
+    timeout-minutes: 30
     steps:
-    - uses: actions/checkout@v4
-    - name: set up JDK 11
-      uses: actions/setup-java@v4
-      with:
-        java-version: '11'
-        distribution: 'temurin'
-        cache: gradle
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-    - name: Build with Gradle
-      run: ./gradlew build
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build tools
+        run: sdkmanager "build-tools;36.0.0"
+
+      - name: Install Apktool
+        run: |
+          curl -fsSL https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar -o "$RUNNER_TEMP/apktool.jar"
+          printf '#!/usr/bin/env bash\nexec java -jar "%s/apktool.jar" "$@"\n' "$RUNNER_TEMP" | sudo tee /usr/local/bin/apktool >/dev/null
+          sudo chmod +x /usr/local/bin/apktool
+          apktool --version
+
+      - name: Prepare reconstructed Apktool project
+        run: |
+          set -euo pipefail
+          test -f resources/AndroidManifest.xml
+          test -d resources/res
+          test -d smali
+          mkdir -p build-src
+          cp resources/AndroidManifest.xml build-src/AndroidManifest.xml
+          cp -a resources/res build-src/res
+          if [ -d resources/assets ]; then cp -a resources/assets build-src/assets; fi
+          if [ -d resources/lib ]; then cp -a resources/lib build-src/lib; fi
+          cp -a smali build-src/smali
+
+          cat > build-src/apktool.yml <<'YAML'
+          version: 3.0.3
+          apkFileName: Kovick.apk
+          isFrameworkApk: false
+          usesFramework:
+            ids:
+              - 1
+            tag: null
+          sdkInfo:
+            minSdkVersion: "27"
+            targetSdkVersion: "35"
+          packageInfo:
+            forcedPackageId: 127
+            renameManifestPackage: null
+          versionInfo:
+            versionCode: 406
+            versionName: "2.3.21"
+          resourcesInfo:
+            packageId: 127
+            packageName: com.zjx.ztezscreenshot
+            sparseEntries: false
+            compactEntries: false
+            keepRawValues: false
+          sharedLibrary: false
+          sparseResources: false
+          doNotCompress:
+            - arsc
+            - png
+            - dex
+          unknownFiles: {}
+          YAML
+
+      - name: Build unsigned APK
+        run: apktool b build-src -o "$RUNNER_TEMP/Kovick-unsigned.apk"
+
+      - name: Align and sign APK
+        run: |
+          set -euo pipefail
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
+          keytool -genkeypair -v             -keystore "$RUNNER_TEMP/kovick-debug.keystore"             -storepass android -keypass android             -alias kovick -keyalg RSA -keysize 2048 -validity 10000             -dname "CN=Kovick, OU=Build, O=Kovick, L=Unknown, ST=Unknown, C=BR"
+          "$BUILD_TOOLS/zipalign" -f -p 4             "$RUNNER_TEMP/Kovick-unsigned.apk"             "$RUNNER_TEMP/Kovick-aligned.apk"
+          "$BUILD_TOOLS/apksigner" sign             --ks "$RUNNER_TEMP/kovick-debug.keystore"             --ks-pass pass:android --key-pass pass:android             --out "$RUNNER_TEMP/Kovick.apk"             "$RUNNER_TEMP/Kovick-aligned.apk"
+          "$BUILD_TOOLS/apksigner" verify --verbose "$RUNNER_TEMP/Kovick.apk"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kovick-APK
+          path: ${{ runner.temp }}/Kovick.apk
+          if-no-files-found: error
+          retention-days: 14
