@@ -15,9 +15,6 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # Do not use android-actions/setup-android here: its sdkmanager bootstrap
-      # is the step that was failing with exit code 1. Install the command-line
-      # tools explicitly and use a known SDK location instead.
       - name: Prepare Android SDK
         shell: bash
         run: |
@@ -70,10 +67,11 @@ jobs:
       - name: Prepare reconstructed project
         shell: bash
         run: |
+          set -euxo pipefail
           rm -rf build-src
-          cp -a . build-src
+          mkdir -p build-src
+          tar --exclude=./build-src --exclude=./.git --exclude=./.github --exclude=./diagnostics -cf - . | tar -xf - -C build-src
           cd build-src
-          rm -rf .git .github diagnostics
 
           python3 - <<'PY'
           from pathlib import Path
