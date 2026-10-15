@@ -50,6 +50,10 @@ jobs:
           tar --exclude='./build-src' --exclude='./.git' --exclude='./.github' -cf - . | tar -xf - -C build-src
           cd build-src
           cp resources/AndroidManifest.xml AndroidManifest.xml
+          rm -rf res assets lib
+          cp -a resources/res ./res
+          if [ -d resources/assets ]; then cp -a resources/assets ./assets; fi
+          if [ -d resources/lib ]; then cp -a resources/lib ./lib; fi
           grep -q 'com.zjx.jyandroid.MainApp.MainActivity' AndroidManifest.xml
           python3 - <<'PY'
           from pathlib import Path
