@@ -1,0 +1,1 @@
+The final APK workflow now stages resources/res into the Apktool project root as res/. This fixes missing manifest resources such as app_name, Theme.Jyandroid, app_logo_1024, backup_rules and Google Play Core resources.
