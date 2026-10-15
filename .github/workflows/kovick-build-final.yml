@@ -49,9 +49,6 @@ jobs:
           cd build-src
 
           cp resources/AndroidManifest.xml AndroidManifest.xml
-
-          # The decompiled resources live under resources/res. Apktool expects
-          # them at the project root as ./res, not ./resources/res.
           rm -rf res assets lib
           cp -a resources/res ./res
           if [ -d resources/assets ]; then cp -a resources/assets ./assets; fi
@@ -65,12 +62,13 @@ jobs:
           from pathlib import Path
           import re
           roots=[Path('smali')]+sorted(Path('.').glob('smali_classes*'))
+          class_re=re.compile(r'(?m)^\.class\s+[^\n]*?(L[^;\s]+;)')
           for root in roots:
               if not root.is_dir():
                   continue
               for src in list(root.rglob('*.smali')):
                   text=src.read_text(errors='ignore')
-                  matches=list(re.finditer(r'(?m)^\\.class\\s+[^\\n]*?(L[^;\\s]+;)', text))
+                  matches=list(class_re.finditer(text))
                   if len(matches)<=1:
                       continue
                   for i,m in enumerate(matches):
@@ -82,11 +80,10 @@ jobs:
           for root in roots:
               if root.is_dir():
                   for f in root.rglob('*.smali'):
-                      if len(re.findall(r'(?m)^\\.class\\b',f.read_text(errors='ignore'))) != 1:
+                      if len(re.findall(r'(?m)^\.class\b',f.read_text(errors='ignore'))) != 1:
                           raise SystemExit(f'Invalid smali: {f}')
           PY
 
-          # Apktool 3.x reads this project metadata and uses framework id 1.
           cat > apktool.yml <<'EOF'
           version: 2.9.3
           apkFileName: Kovick.apk
