@@ -8,6 +8,7 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.view.Gravity;
 import android.widget.*;
+import rikka.shizuku.Shizuku;
 
 public class MainActivity extends Activity {
     LinearLayout root; TextView status;
@@ -22,10 +23,17 @@ public class MainActivity extends Activity {
         root.addView(button("🎮 Iniciar mapeador",v->KovickAccessibilityService.startOverlay(this)));
         root.addView(button("⌨️ Ativar acessibilidade",v->startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))));
         root.addView(button("📱 Permitir sobreposição",v->startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:"+getPackageName())))));
-        root.addView(button("⚡ Verificar Shizuku",v->Toast.makeText(this,KovickAccessibilityService.shizukuOk()?"Shizuku autorizado":"Instale/autorize o Shizuku pela Depuração sem fio",Toast.LENGTH_LONG).show()));
+        root.addView(button("⚡ Autorizar Shizuku / ADB",v->authorizeShizuku()));
         root.addView(button("🎯 Editor de controles",v->KovickAccessibilityService.openEditor(this)));
         root.addView(button("💾 Perfil atual",v->Toast.makeText(this,"Perfil padrão salvo automaticamente",Toast.LENGTH_SHORT).show()));
         setContentView(root); refresh();
+    }
+    void authorizeShizuku(){
+        try {
+            if(!Shizuku.pingBinder()){ Toast.makeText(this,"Abra o Shizuku e inicie pelo método de Depuração sem fio.",Toast.LENGTH_LONG).show(); return; }
+            if(Shizuku.checkSelfPermission()==0){ Toast.makeText(this,"Shizuku já está autorizado.",Toast.LENGTH_SHORT).show(); return; }
+            Shizuku.requestPermission(42);
+        } catch(Throwable t){ Toast.makeText(this,"Shizuku não está disponível.",Toast.LENGTH_LONG).show(); }
     }
     void refresh(){ if(status==null)return; status.setText("STATUS\nSobreposição: "+(Settings.canDrawOverlays(this)?"OK":"PENDENTE")+"\nAcessibilidade: "+(KovickAccessibilityService.enabled?"OK":"PENDENTE")+"\nShizuku/ADB: "+(KovickAccessibilityService.shizukuOk()?"OK":"PENDENTE")); }
     @Override protected void onResume(){super.onResume(); refresh();}
