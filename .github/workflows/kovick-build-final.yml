@@ -18,7 +18,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '17'
 
       - name: Setup Android SDK
         run: |
@@ -33,12 +33,12 @@ jobs:
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
           echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          echo "$ANDROID_SDK_ROOT/build-tools/36.0.0" >> "$GITHUB_PATH"
+          echo "$ANDROID_SDK_ROOT/build-tools/35.0.0" >> "$GITHUB_PATH"
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
-          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Install Apktool
-        run: curl -fsSL -o /tmp/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar
+      - name: Install Apktool 2.9.3
+        run: curl -fsSL -o /tmp/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.9.3/apktool_2.9.3.jar
 
       - name: Prepare reconstructed project
         run: |
@@ -58,7 +58,6 @@ jobs:
           test -f AndroidManifest.xml
           grep -q 'com.zjx.jyandroid.MainApp.MainActivity' AndroidManifest.xml
 
-          # Remove the legacy login entry from the rebuilt package. MainActivity remains the launcher.
           python3 - <<'PY'
           from pathlib import Path
           import re
@@ -68,8 +67,6 @@ jobs:
           p.write_text(s)
           PY
 
-          # Legacy nine-patch files from the original APK are incompatible with modern aapt2.
-          # Rename them to ordinary PNGs only in this temporary build tree.
           python3 - <<'PY'
           from pathlib import Path
           for p in Path('res').rglob('*.9.png'):
@@ -79,7 +76,6 @@ jobs:
               p.rename(q)
           PY
 
-          # Split decompiler-generated files that contain multiple Smali classes.
           python3 - <<'PY'
           from pathlib import Path
           import re
