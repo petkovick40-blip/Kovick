@@ -130,7 +130,7 @@ jobs:
         run: |
           set -e
           cd build-src
-          java -jar /tmp/apktool.jar b . -o ../Kovick-unsigned.apk --use-aapt2
+          java -jar /tmp/apktool.jar b . -o ../Kovick-unsigned.apk
           cd ..
           zipalign -f 4 Kovick-unsigned.apk Kovick-aligned.apk
           keytool -genkeypair -v -keystore /tmp/kovick.keystore -alias kovick -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname 'CN=Kovick,OU=Kovick,O=Kovick,L=BR,ST=BA,C=BR' >/dev/null 2>&1
