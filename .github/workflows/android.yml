@@ -59,51 +59,63 @@ jobs:
 
           root=Path('build-src/smali')
           for p in root.rglob('*.smali'):
-              t=p.read_text(encoding='utf-8',errors='replace')
-              lines=t.splitlines(True)
+              lines=p.read_text(encoding='utf-8',errors='replace').splitlines(True)
               idx=[i for i,x in enumerate(lines) if x.startswith('.class ')]
               if len(idx)>1:
                   p.write_text(''.join(lines[:idx[1]]).rstrip()+'\n',encoding='utf-8')
 
-          values=Path('build-src/res/values')
-          styles=values/'styles.xml'
-          if styles.exists():
-              s=styles.read_text(encoding='utf-8',errors='replace')
-              repl={
-                '<item name="android:scaleType">3</item>':'<item name="android:scaleType">fitCenter</item>',
-                '<item name="android:ellipsize">3</item>':'<item name="android:ellipsize">end</item>',
-                '<item name="android:layout_width">-1</item>':'<item name="android:layout_width">match_parent</item>',
-                '<item name="android:layout_width">-2</item>':'<item name="android:layout_width">wrap_content</item>',
-                '<item name="android:layout_height">-1</item>':'<item name="android:layout_height">match_parent</item>',
-                '<item name="android:layout_height">-2</item>':'<item name="android:layout_height">wrap_content</item>',
-                '<item name="android:windowSoftInputMode">0x10</item>':'<item name="android:windowSoftInputMode">adjustResize</item>',
-                '<item name="android:windowSoftInputMode">0x20</item>':'<item name="android:windowSoftInputMode">adjustPan</item>',
-                '<item name="android:windowSoftInputMode">0x11</item>':'<item name="android:windowSoftInputMode">stateUnspecified|adjustResize</item>',
-                '<item name="android:breakStrategy">0</item>':'<item name="android:breakStrategy">simple</item>',
-                '<item name="android:breakStrategy">1</item>':'<item name="android:breakStrategy">high_quality</item>',
-                '<item name="android:breakStrategy">2</item>':'<item name="android:breakStrategy">balanced</item>',
-                '<item name="android:hyphenationFrequency">0</item>':'<item name="android:hyphenationFrequency">none</item>',
-                '<item name="android:hyphenationFrequency">1</item>':'<item name="android:hyphenationFrequency">normal</item>',
-                '<item name="android:hyphenationFrequency">2</item>':'<item name="android:hyphenationFrequency">full</item>',
-                '<item name="android:textAlignment">1</item>':'<item name="android:textAlignment">gravity</item>',
-                '<item name="android:textAlignment">4</item>':'<item name="android:textAlignment">center</item>',
-                '<item name="android:textAlignment">5</item>':'<item name="android:textAlignment">viewStart</item>',
-                '<item name="android:orientation">0</item>':'<item name="android:orientation">horizontal</item>',
-                '<item name="android:orientation">1</item>':'<item name="android:orientation">vertical</item>',
-                '<item name="android:datePickerMode">1</item>':'<item name="android:datePickerMode">spinner</item>',
-                '<item name="android:datePickerMode">2</item>':'<item name="android:datePickerMode">calendar</item>',
-                '<item name="android:layout_gravity">0x11</item>':'<item name="android:layout_gravity">center</item>',
-                '<item name="android:layout_gravity">0x800013</item>':'<item name="android:layout_gravity">start|center_vertical</item>'
-              }
-              for a,b in repl.items():
-                  s=s.replace(a,b)
-              s=re.sub(r'<item name="android:windowSoftInputMode">0x([0-9a-fA-F]+)</item>', '<item name="android:windowSoftInputMode">adjustResize</item>', s)
-              styles.write_text(s,encoding='utf-8')
+          # Apktool's reconstructed resources sometimes contain raw numeric enum/flag
+          # values. Convert the known Android framework values back to aapt2 syntax.
+          enum_maps = {
+              'scaleType': {'3':'fitCenter','5':'center','6':'centerCrop','7':'centerInside','4':'fitEnd','2':'fitStart','1':'fitXY','0':'matrix'},
+              'ellipsize': {'0':'none','1':'start','2':'middle','3':'end','4':'marquee'},
+              'orientation': {'0':'horizontal','1':'vertical'},
+              'layoutDirection': {'0':'ltr','1':'rtl','2':'inherit','3':'locale'},
+              'textAlignment': {'0':'inherit','1':'gravity','2':'textStart','3':'textEnd','4':'center','5':'viewStart','6':'viewEnd'},
+              'datePickerMode': {'1':'spinner','2':'calendar'},
+              'visibility': {'0':'visible','1':'invisible','2':'gone'},
+              'breakStrategy': {'0':'simple','1':'high_quality','2':'balanced'},
+              'hyphenationFrequency': {'0':'none','1':'normal','2':'full','3':'fast','4':'normal'},
+              'inputType': {'1':'text','2':'number','3':'phone','4':'datetime','7':'numberDecimal'},
+              'windowSoftInputMode': {'0x10':'adjustResize','0x20':'adjustPan','0x11':'stateUnspecified|adjustResize'}
+          }
+
+          gravity = {
+              '0x1':'center_horizontal', '0x2':'left', '0x3':'left', '0x4':'right', '0x5':'right',
+              '0x10':'center_vertical', '0x11':'center', '0x30':'top', '0x50':'bottom',
+              '0x800003':'start', '0x800005':'end', '0x800013':'start|center_vertical',
+              '0x800033':'start|top', '0x800053':'start|bottom'
+          }
+
+          def fix_style_file(p):
+              s=p.read_text(encoding='utf-8',errors='replace')
+              for attr,m in enum_maps.items():
+                  pat=rf'(<item name="android:{re.escape(attr)}">)([^<]+)(</item>)'
+                  s=re.sub(pat, lambda m: m.group(1)+m.group(2) if m.group(2).startswith('@') or m.group(2).startswith('?') else m.group(1)+m.group(2), s)
+                  for raw,name in m.items():
+                      s=s.replace(f'<item name="android:{attr}">{raw}</item>', f'<item name="android:{attr}">{name}</item>')
+              for attr in ('gravity','layout_gravity'):
+                  for raw,name in gravity.items():
+                      s=s.replace(f'<item name="android:{attr}">{raw}</item>', f'<item name="android:{attr}">{name}</item>')
+              # Resource dimensions/layout sentinels from reconstructed values.
+              s=s.replace('<item name="android:layout_width">-1</item>','<item name="android:layout_width">match_parent</item>')
+              s=s.replace('<item name="android:layout_width">-2</item>','<item name="android:layout_width">wrap_content</item>')
+              s=s.replace('<item name="android:layout_height">-1</item>','<item name="android:layout_height">match_parent</item>')
+              s=s.replace('<item name="android:layout_height">-2</item>','<item name="android:layout_height">wrap_content</item>')
+              # Remaining common gravity hex values: preserve semantics where possible.
+              s=re.sub(r'<item name="android:(gravity|layout_gravity)">0x800005</item>', r'<item name="android:\1">end</item>', s)
+              s=re.sub(r'<item name="android:(gravity|layout_gravity)">0x800003</item>', r'<item name="android:\1">start</item>', s)
+              s=re.sub(r'<item name="android:(gravity|layout_gravity)">0x800013</item>', r'<item name="android:\1">start|center_vertical</item>', s)
+              s=re.sub(r'<item name="android:(gravity|layout_gravity)">0x800033</item>', r'<item name="android:\1">start|top</item>', s)
+              s=re.sub(r'<item name="android:(gravity|layout_gravity)">0x800053</item>', r'<item name="android:\1">start|bottom</item>', s)
+              p.write_text(s,encoding='utf-8')
+
+          for p in res.rglob('styles*.xml'):
+              fix_style_file(p)
 
           for p in res.rglob('*.xml'):
               s=p.read_text(encoding='utf-8',errors='replace')
-              s=s.replace('@attr/??','@null').replace('?attr/??','@null')
-              s=s.replace('>???<','>Unknown<')
+              s=s.replace('@attr/??','@null').replace('?attr/??','@null').replace('>???<','>Unknown<')
               p.write_text(s,encoding='utf-8')
           PY
 
