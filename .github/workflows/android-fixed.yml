@@ -136,7 +136,7 @@ jobs:
                   out.append(x)
               p.write_text('\n'.join(out)+'\n')
           else:
-              p.write_text('''version: 3\napkFileName: Kovick.apk\nisFrameworkApk: false\nusesFramework:\n  ids:\n    - 1\n  tag: null\nsdkInfo:\n  minSdkVersion: 23\n  targetSdkVersion: 36\npackageInfo:\n  forcedPackageId: 127\n  renameManifestPackage: null\ndexFiles: []\ndoNotCompress: []\nunknownFiles: {}\n''')
+              p.write_text('''version: 3\napkFileName: Kovick.apk\nisFrameworkApk: false\nusesFramework:\n  ids:\n    - 1\n  tag: null\nsdkInfo:\n  minSdkVersion: 23\n  targetSdkVersion: 36\npackageInfo:\n  forcedPackageId: 127\n  renameManifestPackage: null\nunknownFiles: {}\ndoNotCompress: []\n''')
               print('Generated minimal apktool.yml')
           PY
 
@@ -183,3 +183,5 @@ jobs:
           name: Kovick-APK
           path: Kovick.apk
           if-no-files-found: error
+
+# Build trigger: validate the APK pipeline with the reconstructed Apktool metadata.
