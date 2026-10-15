@@ -47,9 +47,52 @@ jobs:
           if [ -d resources/lib ]; then cp -a resources/lib build-src/lib; fi
           cp -a smali build-src/smali
 
+          # The reconstructed application contains more than the single-dex
+          # method-id limit. Apktool recognizes smali_classes2, smali_classes3,
+          # etc. as separate dex files. Keep each dex comfortably below the
+          # 65,535 method-id limit while never splitting an individual class.
           python3 <<'PY'
           from pathlib import Path
-          import re
+          import shutil
+
+          root = Path('build-src/smali')
+          files = sorted(root.rglob('*.smali'))
+          LIMIT = 30000
+          dex = 1
+          methods = 0
+          targets = {1: root}
+
+          def method_count(p):
+              return sum(1 for line in p.read_text(encoding='utf-8', errors='replace').splitlines() if line.startswith('.method '))
+
+          for src in files:
+              n = method_count(src)
+              if methods and methods + n > LIMIT:
+                  dex += 1
+                  target = root.parent / f'smali_classes{dex}'
+                  target.mkdir(parents=True, exist_ok=True)
+                  targets[dex] = target
+                  methods = 0
+              else:
+                  target = targets[dex]
+              rel = src.relative_to(root)
+              dst = target / rel
+              dst.parent.mkdir(parents=True, exist_ok=True)
+              if target != root:
+                  shutil.move(str(src), str(dst))
+              methods += n
+
+          # Remove empty directories left behind by moves.
+          for d in sorted(root.rglob('*'), reverse=True):
+              if d.is_dir() and not any(d.iterdir()):
+                  d.rmdir()
+          print(f'Split {len(files)} smali classes across {dex} dex source directories')
+          for i, d in targets.items():
+              print(f'  dex {i}: {d}')
+          PY
+
+          python3 <<'PY'
+          from pathlib import Path
           import xml.etree.ElementTree as ET
 
           res=Path('build-src/res')
@@ -58,12 +101,12 @@ jobs:
               if n.exists(): p.unlink()
               else: p.rename(n)
 
-          root=Path('build-src/smali')
-          for p in root.rglob('*.smali'):
-              lines=p.read_text(encoding='utf-8',errors='replace').splitlines(True)
-              idx=[i for i,x in enumerate(lines) if x.startswith('.class ')]
-              if len(idx)>1:
-                  p.write_text(''.join(lines[:idx[1]]).rstrip()+'\n',encoding='utf-8')
+          for root in Path('build-src').glob('smali*'):
+              for p in root.rglob('*.smali'):
+                  lines=p.read_text(encoding='utf-8',errors='replace').splitlines(True)
+                  idx=[i for i,x in enumerate(lines) if x.startswith('.class ')]
+                  if len(idx)>1:
+                      p.write_text(''.join(lines[:idx[1]]).rstrip()+'\n',encoding='utf-8')
 
           enum_maps = {
               'scaleType': {'0':'matrix','1':'fitXY','2':'fitStart','3':'fitCenter','4':'fitEnd','5':'center','6':'centerCrop','7':'centerInside'},
@@ -82,22 +125,17 @@ jobs:
               '0x1':'center_horizontal', '0x2':'left', '0x3':'left', '0x4':'right', '0x5':'right',
               '0x10':'center_vertical', '0x11':'center', '0x30':'top', '0x50':'bottom',
               '0x800003':'start', '0x800005':'end', '0x800013':'start|center_vertical',
-              '0x800033':'start|top', '0x800053':'start|bottom',
-              '0x800055':'end|bottom'
+              '0x800033':'start|top', '0x800053':'start|bottom', '0x800055':'end|bottom'
           }
 
           def fix_style_file(p):
               s=p.read_text(encoding='utf-8',errors='replace')
-              # Reconstructed resources sometimes preserve the original numeric
-              # enum/flag representation as hexadecimal (for example 0x2).
-              # AAPT2 expects the symbolic resource value here.
               for attr,m in enum_maps.items():
                   for raw,name in m.items():
                       s=s.replace(f'<item name="android:{attr}">{raw}</item>', f'<item name="android:{attr}">{name}</item>')
                   for raw,name in m.items():
                       if raw.isdigit():
-                          hx=hex(int(raw))
-                          s=s.replace(f'<item name="android:{attr}">{hx}</item>', f'<item name="android:{attr}">{name}</item>')
+                          s=s.replace(f'<item name="android:{attr}">{hex(int(raw))}</item>', f'<item name="android:{attr}">{name}</item>')
               for attr in ('gravity','layout_gravity'):
                   for raw,name in gravity.items():
                       s=s.replace(f'<item name="android:{attr}">{raw}</item>', f'<item name="android:{attr}">{name}</item>')
@@ -126,9 +164,10 @@ jobs:
           python3 <<'PY'
           from pathlib import Path
           bad=[]
-          for p in Path('build-src/smali').rglob('*.smali'):
-              n=p.read_text(encoding='utf-8',errors='replace').count('.class ')
-              if n!=1: bad.append((str(p),n))
+          for root in Path('build-src').glob('smali*'):
+              for p in root.rglob('*.smali'):
+                  n=p.read_text(encoding='utf-8',errors='replace').count('.class ')
+                  if n!=1: bad.append((str(p),n))
           if bad:
               print(*bad[:20],sep='\n'); raise SystemExit(1)
           PY
