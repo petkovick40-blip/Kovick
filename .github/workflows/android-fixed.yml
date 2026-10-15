@@ -9,25 +9,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
+
       - name: Prepare Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build tools
         shell: bash
         run: |
-          export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
-          export ANDROID_HOME=$ANDROID_SDK_ROOT
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
-          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
-          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          echo "$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
           sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+
       - name: Harden Application
         shell: bash
         run: |
           if git cat-file -e f08b662c8d33444f7296787f8ec6835472d67ef2:smali/com/zjx/jyandroid/App.smali 2>/dev/null; then
+            mkdir -p smali/com/zjx/jyandroid
             git show f08b662c8d33444f7296787f8ec6835472d67ef2:smali/com/zjx/jyandroid/App.smali > smali/com/zjx/jyandroid/App.smali
           fi
           python3 - <<'PY'
@@ -43,8 +44,10 @@ jobs:
                       s=s[:a]+'.method public onCreate()V\n    .locals 0\n    invoke-super {p0}, Landroid/app/Application;->onCreate()V\n    return-void\n.end method'+s[b:]
                       p.write_text(s)
           PY
+
       - name: Install Apktool
-        run: curl -L -o /tmp/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar
+        run: curl -L --fail -o /tmp/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar
+
       - name: Prepare reconstructed project
         shell: bash
         run: |
@@ -52,6 +55,85 @@ jobs:
           cp -a . build-src
           cd build-src
           rm -rf .git .github diagnostics
+
+          # The repository is an Apktool reconstruction. Make sure the project
+          # always contains a valid AndroidManifest.xml before apktool builds it.
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path('.')
+          manifest = root / 'AndroidManifest.xml'
+          smali_dirs = [root / 'smali'] + sorted(root.glob('smali_classes*'))
+
+          package = 'com.kovick.generated'
+          app_class = None
+          app = root / 'smali/com/zjx/jyandroid/App.smali'
+          if app.exists():
+              app_class = 'com.zjx.jyandroid.App'
+              package = 'com.zjx.jyandroid'
+          else:
+              for d in smali_dirs:
+                  if not d.exists():
+                      continue
+                  for f in d.rglob('App.smali'):
+                      rel = f.relative_to(d).with_suffix('')
+                      parts = list(rel.parts)
+                      if parts:
+                          app_class = '.'.join(parts)
+                          package = '.'.join(parts[:-1]) or package
+                          break
+                  if app_class:
+                      break
+
+          activity = None
+          patterns = [
+              r'^\.super Landroid/app/Activity;',
+              r'^\.super Landroidx/appcompat/app/AppCompatActivity;',
+              r'^\.super Landroidx/fragment/app/FragmentActivity;',
+              r'^\.super Landroid/app/ActivityGroup;'
+          ]
+          for d in smali_dirs:
+              if activity:
+                  break
+              if not d.exists():
+                  continue
+              for f in d.rglob('*.smali'):
+                  try:
+                      text = f.read_text(errors='ignore')
+                  except Exception:
+                      continue
+                  if any(re.search(p, text, re.M) for p in patterns):
+                      rel = f.relative_to(d).with_suffix('')
+                      activity = '.'.join(rel.parts)
+                      break
+
+          if activity is None:
+              # Last-resort launcher: keep the APK structurally valid even when
+              # the decompiler did not preserve the original activity hierarchy.
+              activity = app_class or package + '.MainActivity'
+
+          application_attr = f'\n        android:name=".{app_class.split(".")[-1]}"' if app_class and app_class.startswith(package + '.') else ''
+          manifest_text = f'''<?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="{package}"
+              android:versionCode="1"
+              android:versionName="1.0">
+              <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="36" />
+              <application android:theme="@android:style/Theme.Material.Light.NoActionBar" android:label="Kovick" android:allowBackup="false" android:supportsRtl="true"{application_attr}>
+                  <activity android:name="{activity}" android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          '''
+          manifest.write_text(manifest_text)
+          print(f'Generated manifest: package={package}, activity={activity}, application={app_class}')
+          PY
+
           python3 - <<'PY'
           from pathlib import Path
           p=Path('apktool.yml')
@@ -64,6 +146,7 @@ jobs:
                   out.append(x)
               p.write_text('\n'.join(out)+'\n')
           PY
+
           if [ -d smali ]; then
             python3 - <<'PY'
           from pathlib import Path
@@ -80,6 +163,7 @@ jobs:
               count+=n
           PY
           fi
+
           python3 - <<'PY'
           from pathlib import Path
           import re
@@ -95,15 +179,23 @@ jobs:
                   return h+v+t
               p.write_text(pat.sub(f,s))
           PY
+
+          test -f AndroidManifest.xml
+          echo '--- AndroidManifest.xml ---'
+          cat AndroidManifest.xml
+
       - name: Build APK
         shell: bash
         run: |
           cd build-src
           java -jar /tmp/apktool.jar b . -o ../Kovick-unsigned.apk --use-aapt2
+          test -s ../Kovick-unsigned.apk
+          unzip -l ../Kovick-unsigned.apk | grep -q 'AndroidManifest.xml'
           zipalign -f 4 ../Kovick-unsigned.apk ../Kovick-aligned.apk
           keytool -genkeypair -v -keystore /tmp/kovick.keystore -alias kovick -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Kovick,O=Kovick,C=BR" >/dev/null 2>&1
-          apksigner sign --ks /tmp/kovick.keystore --ks-pass pass:android --key-pass pass:android --out ../Kovick.apk ../Kovick-aligned.apk
-          apksigner verify --verbose ../Kovick.apk
+          apksigner sign --ks /tmp/kovick.keystore --ks-pass pass:android --key-pass pass:android --min-sdk-version 23 --out ../Kovick.apk ../Kovick-aligned.apk
+          apksigner verify --verbose --min-sdk-version 23 ../Kovick.apk
+
       - uses: actions/upload-artifact@v4
         with:
           name: Kovick-APK
