@@ -13,222 +13,31 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-
       - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install SDK
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Build standalone Kovick
         run: |
           set -euo pipefail
-          export ANDROID_SDK_ROOT="$HOME/android-sdk"
-          export ANDROID_HOME="$ANDROID_SDK_ROOT"
-          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-          curl -fsSL -o /tmp/cmdline.zip https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip
-          mkdir -p /tmp/cmdline
-          unzip -q /tmp/cmdline.zip -d /tmp/cmdline
-          cp -a /tmp/cmdline/cmdline-tools/. "$ANDROID_SDK_ROOT/cmdline-tools/latest/"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
-          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
-          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          echo "$ANDROID_SDK_ROOT/build-tools/35.0.0" >> "$GITHUB_PATH"
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
-          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
-      - name: Install Apktool 2.9.3
+          gradle wrapper --gradle-version 8.9
+          ./gradlew :app:assembleRelease --stacktrace
+      - name: Sign APK
         run: |
           set -euo pipefail
-          curl -fsSL -o /tmp/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.9.3/apktool_2.9.3.jar
-          echo "=== APKTOOL VERSION ==="
-          java -jar /tmp/apktool.jar --version
-
-      - name: Prepare reconstructed project
-        run: |
-          set -euo pipefail
-          rm -rf build-src
-          mkdir build-src
-          tar --exclude='./build-src' --exclude='./.git' --exclude='./.github' -cf - . | tar -xf - -C build-src
-          cd build-src
-
-          cp resources/AndroidManifest.xml AndroidManifest.xml
-          rm -rf res assets lib
-          cp -a resources/res ./res
-          if [ -d resources/assets ]; then cp -a resources/assets ./assets; fi
-          if [ -d resources/lib ]; then cp -a resources/lib ./lib; fi
-
-          test -d res
-          test -f AndroidManifest.xml
-          grep -q 'com.zjx.jyandroid.MainApp.MainActivity' AndroidManifest.xml
-
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          p=Path('AndroidManifest.xml')
-          s=p.read_text(errors='ignore')
-          s=re.sub(r'\s*<activity\n\s*android:name="com\.zjx\.jyandroid\.MainApp\.LoginActivity"[^>]*/>', '', s)
-          p.write_text(s)
-          PY
-
-          python3 - <<'PY'
-          from pathlib import Path
-          for p in Path('res').rglob('*.9.png'):
-              q=p.with_name(p.name[:-6] + '.png')
-              if q.exists():
-                  q.unlink()
-              p.rename(q)
-          PY
-
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          roots=[Path('smali')]+sorted(Path('.').glob('smali_classes*'))
-          class_re=re.compile(r'(?m)^\.class\s+[^\n]*?(L[^;\s]+;)')
-          for root in roots:
-              if not root.is_dir():
-                  continue
-              for src in list(root.rglob('*.smali')):
-                  text=src.read_text(errors='ignore')
-                  matches=list(class_re.finditer(text))
-                  if len(matches)<=1:
-                      continue
-                  for i,m in enumerate(matches):
-                      end=matches[i+1].start() if i+1<len(matches) else len(text)
-                      dst=root/(m.group(1)[1:-1]+'.smali')
-                      dst.parent.mkdir(parents=True,exist_ok=True)
-                      dst.write_text(text[m.start():end])
-                  src.unlink()
-          for root in roots:
-              if root.is_dir():
-                  for f in root.rglob('*.smali'):
-                      if len(re.findall(r'(?m)^\.class\b',f.read_text(errors='ignore'))) != 1:
-                          raise SystemExit(f'Invalid smali: {f}')
-          PY
-
-          # The original APK was decompiled with numeric enum/flag values.
-          # Modern aapt2 requires the symbolic values in these Android attrs.
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          root=Path('res/values')
-          enum_maps={
-              'scaleType': ['matrix','fitXY','fitStart','fitCenter','fitEnd','center','centerCrop','centerInside'],
-              'ellipsize': ['start','middle','end','marquee'],
-              'breakStrategy': ['simple','high_quality','balanced'],
-              'hyphenationFrequency': ['none','normal','full','normal'],
-              'importantForAccessibility': ['auto','yes','no','noHideDescendants'],
-          }
-          dim_attrs={'layout_width','layout_height'}
-          flag_maps={
-              'windowSoftInputMode': {
-                  '0x10':'adjustResize','0x20':'adjustPan','0x11':'adjustResize|stateUnspecified',
-                  '0x21':'adjustPan|stateUnspecified','0x12':'adjustResize|stateHidden',
-                  '0x22':'adjustPan|stateHidden','0x13':'adjustResize|stateAlwaysHidden',
-                  '0x23':'adjustPan|stateAlwaysHidden'
-              }
-          }
-          for p in root.glob('*.xml'):
-              s=p.read_text(errors='ignore')
-              def repl(m):
-                  name=m.group(1); val=m.group(2)
-                  bare=name.split(':')[-1]
-                  if bare in enum_maps and val.isdigit():
-                      n=int(val); vals=enum_maps[bare]
-                      if 0 <= n < len(vals): return f'<item name="{name}">{vals[n]}</item>'
-                  if bare in dim_attrs and val in ('-1','-2'):
-                      return f'<item name="{name}">{"match_parent" if val=="-1" else "wrap_content"}</item>'
-                  if bare in flag_maps and val.lower() in flag_maps[bare]:
-                      return f'<item name="{name}">{flag_maps[bare][val.lower()]}</item>'
-                  return m.group(0)
-              s=re.sub(r'<item name="([^"]+)">([^<]+)</item>', repl, s)
-              s=s.replace('>???<','>&#63;&#63;&#63;<')
-              p.write_text(s)
-          PY
-
-          # A single dex cannot contain more than 65535 method references.
-          # The reconstructed repository stores all classes under smali/, so
-          # rebuild them into conservative multidex groups before Apktool runs.
-          python3 - <<'PY'
-          from pathlib import Path
-          import re, shutil
-
-          base=Path('smali')
-          classes=[p for p in base.rglob('*.smali')]
-          classes.sort(key=lambda p: str(p))
-
-          def method_count(p):
-              return len(re.findall(r'(?m)^\.method\b', p.read_text(errors='ignore')))
-
-          # Keep launcher/application classes in the primary dex.
-          priority=[]
-          normal=[]
-          for p in classes:
-              s=str(p).replace('\\','/')
-              if s.endswith('/com/zjx/jyandroid/MainApp/MainActivity.smali') or s.endswith('/com/zjx/jyandroid/App.smali'):
-                  priority.append(p)
-              else:
-                  normal.append(p)
-
-          ordered=priority+normal
-          for d in Path('.').glob('smali_classes*'):
-              if d.is_dir(): shutil.rmtree(d)
-
-          LIMIT=45000
-          groups=[]
-          current=[]
-          count=0
-          for p in ordered:
-              n=method_count(p)
-              if current and count+n>LIMIT:
-                  groups.append(current)
-                  current=[]
-                  count=0
-              current.append(p)
-              count += n
-          if current: groups.append(current)
-
-          for gi, group in enumerate(groups):
-              target=base if gi==0 else Path(f'smali_classes{gi+1}')
-              target.mkdir(parents=True,exist_ok=True)
-              total=0
-              for src in group:
-                  rel=src.relative_to(base)
-                  dst=target/rel
-                  dst.parent.mkdir(parents=True,exist_ok=True)
-                  if src.resolve()!=dst.resolve():
-                      shutil.move(str(src),str(dst))
-                  total += method_count(dst)
-              print(f'MULTIDEX_GROUP {gi+1}: {len(group)} classes, {total} methods')
-          print(f'MULTIDEX_GROUPS_TOTAL {len(groups)}')
-          PY
-
-          cat > apktool.yml <<'EOF'
-          version: 2.9.3
-          apkFileName: Kovick.apk
-          isFrameworkApk: false
-          usesFramework:
-            ids:
-              - 1
-          sdkInfo:
-            minSdkVersion: '27'
-            targetSdkVersion: '35'
-          EOF
-
-      - name: Build and sign APK
-        run: |
-          set -euo pipefail
-          cd build-src
-          java -jar /tmp/apktool.jar b . -o ../Kovick-unsigned.apk
-          zipalign -f -p 4 ../Kovick-unsigned.apk ../Kovick-aligned.apk
           keytool -genkeypair -v -keystore /tmp/kovick.keystore -storepass android -keypass android -alias kovick -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Kovick,O=Kovick,C=BR" >/dev/null 2>&1
-          apksigner sign --ks /tmp/kovick.keystore --ks-pass pass:android --key-pass pass:android --min-sdk-version 27 --out ../Kovick.apk ../Kovick-aligned.apk
-          apksigner verify --verbose --min-sdk-version 27 ../Kovick.apk
-
+          zipalign -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/Kovick-aligned.apk
+          apksigner sign --ks /tmp/kovick.keystore --ks-pass pass:android --key-pass pass:android --out app/build/outputs/apk/release/Kovick.apk app/build/outputs/apk/release/Kovick-aligned.apk
+          apksigner verify --verbose app/build/outputs/apk/release/Kovick.apk
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Kovick-APK
-          path: Kovick.apk
+          path: app/build/outputs/apk/release/Kovick.apk
           if-no-files-found: error
           retention-days: 90
